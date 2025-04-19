@@ -33,3 +33,17 @@ D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Debug\System.T
 D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Debug\Microsoft.Bcl.AsyncInterfaces.dll
 D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Debug\System.Buffers.dll
 D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Debug\System.Runtime.CompilerServices.Unsafe.dll
+D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Debug\DeltaCompressionDotNet.dll
+D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Debug\DeltaCompressionDotNet.MsDelta.dll
+D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Debug\DeltaCompressionDotNet.PatchApi.dll
+D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Debug\Mono.Cecil.dll
+D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Debug\Mono.Cecil.Mdb.dll
+D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Debug\Mono.Cecil.Pdb.dll
+D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Debug\Mono.Cecil.Rocks.dll
+D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Debug\NuGet.Squirrel.dll
+D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Debug\SharpCompress.dll
+D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Debug\Splat.dll
+D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Debug\Squirrel.dll
+D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Debug\NuGet.Squirrel.pdb
+D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Debug\Splat.pdb
+D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Debug\Squirrel.pdb

@@ -4,16 +4,16 @@
 winexe
 C#
 .cs
-D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\obj\Debug\
+D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\obj\Release\
 OrganizadorArquivosWPF
 none
 false
-DEBUG;TRACE
+TRACE
 D:\PROGRAMA ONE\OrganizadorArquivosWPF\OrganizadorArquivosWPF\App.xaml
 2228549230
 
 131367042178
-38-1041368395
+381090887657
 MainWindow.xaml;Views\UpdateWindow.xaml;
 
 False
