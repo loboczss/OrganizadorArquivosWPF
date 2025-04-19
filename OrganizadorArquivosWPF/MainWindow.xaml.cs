@@ -30,7 +30,7 @@ namespace OrganizadorArquivosWPF
         private string _pastaOrigem = string.Empty;
 
         /// <summary>
-        /// Construtor: inicializa componentes, exibe versão, config de logs e serviços, e dispara update automático.
+        /// Construtor: inicializa componentes, exibe versão, configura logs e serviços, e dispara update automático.
         /// </summary>
         public MainWindow()
         {
@@ -61,48 +61,53 @@ namespace OrganizadorArquivosWPF
             Loaded += async (_, __) => await RunUpdateAsync(manual: false);
         }
 
-        #region Auto‑Update com Squirrel
-
         /// <summary>
-        /// Exibe o UpdateWindow e executa a checagem/aplicação de update.
+        /// Executa a checagem e aplicação de atualização.
+        /// Durante o processo, a janela principal fica desabilitada para evitar cliques.
         /// </summary>
-        /// <param name="manual">Se true, mostra mensagens mesmo sem update.</param>
         private async Task RunUpdateAsync(bool manual)
         {
-            // Cria e exibe splash de atualização
+            // Desabilita a janela principal
+            this.IsEnabled = false;
+
+            // Exibe a janela de progresso de atualização
             var splash = new UpdateWindow { Owner = this };
-            splash.SetStatus(manual ? "Procurando atualização..." : "Verificando nova versão...");
+            splash.SetStatus(manual
+                ? "Procurando atualização..."
+                : "Verificando nova versão...");
             splash.Show();
 
-            // Progress<string> repassa cada mensagem ao splash
-            var progress = new Progress<string>(splash.SetStatus);
-
-            // Chama o serviço de atualização (Squirrel)
-            var result = await _update.CheckForUpdateAsync(manual, progress);
-
-            // Se não reiniciou (AlreadyLatest, NoInternet, Error), espera 2s para leitura
-            if (result == UpdateOutcome.AlreadyLatest ||
-                result == UpdateOutcome.NoInternet ||
-                result == UpdateOutcome.Error)
+            try
             {
-                await Task.Delay(2000);
-            }
+                // Cria Progress para repassar status ao splash
+                var progress = new Progress<string>(splash.SetStatus);
 
-            // Fecha o splash
-            splash.Close();
+                // Executa o serviço de atualização (Squirrel)
+                var result = await _update.CheckForUpdateAsync(manual, progress);
+
+                // Se não reiniciou, aguarda alguns segundos para leitura da mensagem final
+                if (result == UpdateOutcome.AlreadyLatest ||
+                    result == UpdateOutcome.NoInternet ||
+                    result == UpdateOutcome.Error)
+                {
+                    await Task.Delay(2000);
+                }
+            }
+            finally
+            {
+                // Fecha splash e reabilita UI principal
+                splash.Close();
+                this.IsEnabled = true;
+            }
         }
 
         /// <summary>
-        /// Handler do botão "Procurar Atualização" na UI.
+        /// Handler do botão "Procurar Atualização" manual.
         /// </summary>
         private async void BtnCheckUpdate_Click(object sender, RoutedEventArgs e)
         {
             await RunUpdateAsync(manual: true);
         }
-
-        #endregion
-
-        #region Exportar e Selecionar Pasta
 
         /// <summary>
         /// Exporta o log para um arquivo TXT na área de trabalho.
@@ -127,7 +132,7 @@ namespace OrganizadorArquivosWPF
         }
 
         /// <summary>
-        /// Abre diálogo para selecionar pasta de origem dos arquivos.
+        /// Abre diálogo para selecionar pasta de origem.
         /// </summary>
         private void BtnSelecionar_Click(object sender, RoutedEventArgs e)
         {
@@ -142,12 +147,8 @@ namespace OrganizadorArquivosWPF
             }
         }
 
-        #endregion
-
-        #region Processar, Desfazer e Modo Dev
-
         /// <summary>
-        /// Valida campos e executa o renomeio via RenamerService.
+        /// Valida campos e executa o renomeio.
         /// </summary>
         private async void BtnProcessar_Click(object sender, RoutedEventArgs e)
         {
@@ -164,7 +165,8 @@ namespace OrganizadorArquivosWPF
                     string.IsNullOrWhiteSpace(uf) ||
                     string.IsNullOrWhiteSpace(sistema))
                 {
-                    MessageBox.Show("Preencha todos os campos.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show("Preencha todos os campos.", "Aviso",
+                                    MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -172,15 +174,16 @@ namespace OrganizadorArquivosWPF
                 var registro = _excel.GetRecord(os, uf);
                 if (registro == null)
                 {
-                    MessageBox.Show("Nº OS não corresponde ao estado selecionado!", "Planilha Clientes",
+                    MessageBox.Show("Nº OS não corresponde ao estado selecionado!",
+                                    "Planilha Clientes",
                                     MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
                 // Confirmação de cliente
                 if (MessageBox.Show($"Cliente:\n\n{registro.NomeCliente}\n\nContinuar?",
-                                    "Confirmação", MessageBoxButton.YesNo, MessageBoxImage.Question)
-                    != MessageBoxResult.Yes)
+                                    "Confirmação", MessageBoxButton.YesNo,
+                                    MessageBoxImage.Question) != MessageBoxResult.Yes)
                     return;
 
                 // Valida arquivos de controlador
@@ -195,27 +198,31 @@ namespace OrganizadorArquivosWPF
                     if (!TemCtrl(1))
                     {
                         MessageBox.Show("Intelbras requer ao menos 1 arquivo de controlador (con*).",
-                                        "Arquivos ausentes", MessageBoxButton.OK, MessageBoxImage.Error);
+                                        "Arquivos ausentes",
+                                        MessageBoxButton.OK, MessageBoxImage.Error);
                         return;
                     }
                 }
                 else
                 {
-                    // Hoppecker: pergunta sobre Sistema 160
-                    is160 = MessageBox.Show("Sistema 160 (2 controladores)?", "Hoppecker",
-                                            MessageBoxButton.YesNo, MessageBoxImage.Question)
+                    is160 = MessageBox.Show("Sistema 160 (2 controladores)?",
+                                            "Hoppecker",
+                                            MessageBoxButton.YesNo,
+                                            MessageBoxImage.Question)
                              == MessageBoxResult.Yes;
 
                     if (is160 && !TemCtrl(2))
                     {
                         MessageBox.Show("Sistema 160 requer 2 arquivos de controlador.",
-                                        "Arquivos ausentes", MessageBoxButton.OK, MessageBoxImage.Error);
+                                        "Arquivos ausentes",
+                                        MessageBoxButton.OK, MessageBoxImage.Error);
                         return;
                     }
                     if (!is160 && !TemCtrl(1))
                     {
                         MessageBox.Show("Hoppecker requer 1 arquivo de controlador.",
-                                        "Arquivos ausentes", MessageBoxButton.OK, MessageBoxImage.Error);
+                                        "Arquivos ausentes",
+                                        MessageBoxButton.OK, MessageBoxImage.Error);
                         return;
                     }
                 }
@@ -250,7 +257,7 @@ namespace OrganizadorArquivosWPF
         }
 
         /// <summary>
-        /// Alterna modo desenvolvedor (destino de teste).
+        /// Alterna modo desenvolvedor.
         /// </summary>
         private void BtnDev_Click(object sender, RoutedEventArgs e)
         {
@@ -276,6 +283,5 @@ namespace OrganizadorArquivosWPF
             }
         }
 
-        #endregion
     }
 }

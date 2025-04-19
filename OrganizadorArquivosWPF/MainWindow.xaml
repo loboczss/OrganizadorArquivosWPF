@@ -100,8 +100,24 @@
                     Style="{StaticResource PrimaryButton}"
                     Click="BtnCheckUpdate_Click"/>
 
-            <TextBlock Text="© 2025 ONE Engenharia"
+            <TextBlock Text="© 2025 One Engenharia - Juan"
                        Foreground="White" Margin="10"/>
+
+            <Button x:Name="BtnExportar"
+                    Content="Exportar Log"
+                    Width="104"
+                    Margin="10"
+                    Style="{StaticResource DevButton}"
+                    Click="BtnExportar_Click" Cursor=""/>
+            
+            <Button x:Name="BtnDev"
+                    Content="Dev"
+                    Width="104"
+                    Margin="10"
+                    Style="{StaticResource DevButton}"
+                    Click="BtnDev_Click"/>
+
+
         </StackPanel>
 
         <!-- Conteúdo principal (Config + Log) -->
@@ -167,18 +183,28 @@
                 </Border>
             </ScrollViewer>
 
-            <!-- Card Log -->
+            <!-- Card Log com scroll interno -->
             <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="40,0,40,10">
-                <StackPanel>
-                    <TextBlock Text="Log de Operações:" FontWeight="Bold"/>
-                    <DataGrid x:Name="GridLog"
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Text="Log de Operações:"
+                               FontWeight="Bold"
+                               Margin="0,0,0,4"/>
+
+                    <DataGrid Grid.Row="1"
+                              x:Name="GridLog"
                               AutoGenerateColumns="False"
                               IsReadOnly="True"
                               HeadersVisibility="Column"
                               ScrollViewer.VerticalScrollBarVisibility="Auto"
                               ScrollViewer.HorizontalScrollBarVisibility="Auto"
                               MinHeight="150"
-                              Margin="0,10,0,0">
+                              Margin="0">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Hora" Width="90"
                                                 Binding="{Binding Hora, StringFormat=HH:mm:ss}"/>
@@ -194,7 +220,7 @@
                             </DataGridTextColumn>
                         </DataGrid.Columns>
                     </DataGrid>
-                </StackPanel>
+                </Grid>
             </Border>
         </Grid>
 
@@ -210,12 +236,6 @@
 
             <!-- Botões -->
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                <Button x:Name="BtnExportar"
-                        Content="Exportar Log"
-                        Width="110"
-                        Margin="0,0,18,0"
-                        Style="{StaticResource DevButton}"
-                        Click="BtnExportar_Click"/>
 
                 <Button x:Name="BtnProcessar"
                         Content="Processar"
@@ -232,11 +252,7 @@
                         Click="BtnDesfazer_Click"
                         Visibility="Collapsed"/>
 
-                <Button x:Name="BtnDev"
-                        Content="Dev"
-                        Width="85"
-                        Style="{StaticResource DevButton}"
-                        Click="BtnDev_Click"/>
+
             </StackPanel>
         </DockPanel>
     </Grid>

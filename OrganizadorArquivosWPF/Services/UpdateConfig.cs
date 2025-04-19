@@ -5,8 +5,8 @@ using System.Text.RegularExpressions;
 namespace OrganizadorArquivosWPF.Services
 {
     /// <summary>
-    /// Lê VersaoUrl e ZipUrl de update.json (opcional).  
-    /// Se não existir, usa os links raw no Dropbox.
+    /// Carrega VersaoUrl e ZipUrl de update.json (opcional),
+    /// ou usa os links raw do Dropbox por padrão.
     /// </summary>
     public sealed class UpdateConfig
     {
@@ -24,9 +24,9 @@ namespace OrganizadorArquivosWPF.Services
 
         public static UpdateConfig Load()
         {
-            // Raw do seu versao.txt
+            // raw do seu versao.txt no Dropbox
             var versaoUrl = "https://dl.dropboxusercontent.com/s/kxa0qmj65891joipxl9yp/versao.txt";
-            // Raw do Debug.zip (você deve ter compactado sua pasta debug em Debug.zip e feito upload)
+            // raw do seu Debug.zip no Dropbox
             var zipUrl = "https://dl.dropboxusercontent.com/s/zp30fygytil2opnv5q4ah/Debug.zip?dl=1";
 
             if (!File.Exists(_cfgPath))
@@ -47,7 +47,7 @@ namespace OrganizadorArquivosWPF.Services
             }
             catch
             {
-                // se falhar, usa os padrões acima
+                // mantém os padrões em caso de erro
             }
 
             return new UpdateConfig(versaoUrl, zipUrl);
