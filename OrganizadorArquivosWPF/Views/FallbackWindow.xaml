@@ -1,0 +1,133 @@
+<Window x:Class="OrganizadorArquivosWPF.Views.FallbackWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Dados Manuais"
+        Width="360" Height="456"
+        WindowStartupLocation="CenterOwner"
+        Background="#F2F2F2">
+
+	<!-- ────────── Recursos (mesmos do MainWindow) ────────── -->
+	<Window.Resources>
+		<!-- Cartão branco com sombra suave -->
+		<Style x:Key="CardStyle" TargetType="Border">
+			<Setter Property="Background"   Value="White"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding"      Value="20"/>
+			<Setter Property="Margin"       Value="10"/>
+			<Setter Property="Effect">
+				<Setter.Value>
+					<DropShadowEffect Color="Black"
+                                      Opacity="0.15"
+                                      BlurRadius="15"
+                                      ShadowDepth="2"/>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+		<!-- TextBox com apenas borda inferior arredondada -->
+		<Style x:Key="BottomBorderTextBox" TargetType="TextBox">
+			<Setter Property="Background"      Value="Transparent"/>
+			<Setter Property="BorderBrush"     Value="#007ACC"/>
+			<Setter Property="BorderThickness" Value="0,0,0,2"/>
+			<Setter Property="Padding"         Value="4"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="TextBox">
+						<Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="0,0,4,4">
+							<ScrollViewer x:Name="PART_ContentHost"/>
+						</Border>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+		<!-- Botões arredondados -->
+		<ControlTemplate x:Key="RoundedButtonTemplate" TargetType="Button">
+			<Border Background="{TemplateBinding Background}"
+                    CornerRadius="5"
+                    Padding="{TemplateBinding Padding}">
+				<ContentPresenter HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"/>
+			</Border>
+		</ControlTemplate>
+		<Style x:Key="PrimaryButton" TargetType="Button">
+			<Setter Property="Template"       Value="{StaticResource RoundedButtonTemplate}"/>
+			<Setter Property="Background"     Value="#007ACC"/>
+			<Setter Property="Foreground"     Value="White"/>
+			<Setter Property="Padding"        Value="10,6"/>
+			<Setter Property="FontWeight"     Value="Bold"/>
+			<Setter Property="Cursor"         Value="Hand"/>
+			<Setter Property="BorderThickness" Value="0"/>
+		</Style>
+		<Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+			<Setter Property="Background" Value="#E81123"/>
+		</Style>
+	</Window.Resources>
+
+	<!-- ────────── Layout ────────── -->
+	<Grid Margin="0,0,0,28">
+		<Border Style="{StaticResource CardStyle}" Margin="10,30,10,28">
+			<StackPanel>
+
+				<!-- Número da OS -->
+				<TextBlock Text="Número da OS:" FontWeight="Bold" Margin="0,0,0,6"/>
+				<TextBox x:Name="TxtOSFull"
+                         Style="{StaticResource BottomBorderTextBox}"
+                         FontSize="18"
+                         IsReadOnly="True"/>
+
+				<!-- ID SIGFI -->
+				<TextBlock Text="ID SIGFI:" FontWeight="Bold" Margin="0,12,0,6"/>
+				<TextBox x:Name="TxtIdSigfi"
+                         Style="{StaticResource BottomBorderTextBox}"
+                         FontSize="18"
+                         TextChanged="TxtIdSigfi_TextChanged"/>
+
+				<!-- Rota -->
+				<TextBlock Text="Rota:" FontWeight="Bold" Margin="0,12,0,6"/>
+				<!-- ComboBox estreito dentro de borda inferior -->
+				<Border BorderBrush="#007ACC"
+                        BorderThickness="0,0,0,2"
+                        CornerRadius="0,0,4,4"
+                        Background="Transparent">
+					<ComboBox x:Name="CmbRota"
+                              Background="Transparent"
+                              BorderThickness="0"
+                              Padding="4"
+                              Width="297"
+                              SelectionChanged="CmbRota_Changed"
+                              IsEditable="False">
+						<ComboBoxItem Content="— selecione —"/>
+					</ComboBox>
+				</Border>
+
+				<!-- Checkbox para 160 -->
+				<CheckBox x:Name="Chk160"
+                          Content="Sistema 160 (2 controladores)?"
+                          Margin="0,12,0,0"
+                          Checked="Chk160_Checked"
+                          Unchecked="Chk160_Checked"/>
+
+				<!-- Botões OK / Cancelar -->
+				<StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            Margin="0,20,0,0">
+					<Button x:Name="BtnOk"
+                            Content="OK"
+                            Style="{StaticResource PrimaryButton}"
+                            Width="80"
+                            IsEnabled="False"
+                            Click="Ok_Click"/>
+					<Button Content="Cancelar"
+                            Style="{StaticResource DangerButton}"
+                            Width="80"
+                            Margin="10,0,0,0"
+                            Click="Cancel_Click"/>
+				</StackPanel>
+			</StackPanel>
+		</Border>
+	</Grid>
+</Window>

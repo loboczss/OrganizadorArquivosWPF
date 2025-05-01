@@ -4,17 +4,17 @@
 winexe
 C#
 .cs
-D:\Dev\OrganizadorArquivosWPF\OrganizadorArquivosWPF\obj\Release\
+D:\Dev\OrganizadorArquivosWPF-1.4.1.3\OrganizadorArquivosWPF\OrganizadorArquivosWPF\obj\Release\
 OrganizadorArquivosWPF
 none
 false
 TRACE
-D:\Dev\OrganizadorArquivosWPF\OrganizadorArquivosWPF\App.xaml
-2228549230
+D:\Dev\OrganizadorArquivosWPF-1.4.1.3\OrganizadorArquivosWPF\OrganizadorArquivosWPF\App.xaml
+2-970791725
 
-14-1372190130
-39-2047524320
-MainWindow.xaml;Views\UpdateWindow.xaml;
+13-326542602
+561310060192
+MainWindow.xaml;Views\FallbackWindow.xaml;
 
 False
 

@@ -1,77 +1,113 @@
 ﻿using System;
+using System.Data;
 using System.IO;
 using System.Linq;
-using OfficeOpenXml;
+using System.Text;
+using System.Collections.Generic;
+using ExcelDataReader;
 using OrganizadorArquivosWPF.Models;
 
 namespace OrganizadorArquivosWPF.Services
 {
-    /// <summary>
-    /// Serviço para leitura da planilha de clientes.
-    /// Configura o contexto de licença do EPPlus para uso não-comercial
-    /// e abre o arquivo em modo compartilhado para evitar bloqueios.
-    /// </summary>
     public class ExcelService
     {
         private readonly string _excelPath;
 
         public ExcelService()
         {
-            // Define o contexto de licença do EPPlus antes de qualquer uso
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            // Necessário para ler .xlsb
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
-            // Monta o caminho da planilha de clientes
             _excelPath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                 "ONE ENGENHARIA INDUSTRIA E COMERCIO LTDA",
-                "ONE Engenharia - Renomeação",
-                "Clientes.xlsx"
+                "ONE Engenharia - Power BI",
+                "Fluxo de Dados - Power BI.xlsb"
             );
         }
 
         /// <summary>
-        /// Retorna o registro correspondente ao número da OS e UF,
-        /// ou null se não encontrado.
-        /// Abre o arquivo com FileShare.ReadWrite para evitar erro de acesso quando estiver aberto no Excel.
+        /// Lê a aba "Manutenção AC_MT" e retorna o ClientRecord cujo NUMOS casa com numOS completo (ex: "AC202500000265").
         /// </summary>
-        public ClientRecord GetRecord(string numOS, string uf)
+        public ClientRecord GetRecord(string numOS, string ufIgnored)
         {
-            var fileInfo = new FileInfo(_excelPath);
-            if (!fileInfo.Exists)
+            if (!File.Exists(_excelPath))
                 throw new FileNotFoundException("Planilha não encontrada em: " + _excelPath);
 
-            // Abre em modo compartilhado para leitura
-            using (var stream = new FileStream(
-                fileInfo.FullName,
-                FileMode.Open,
-                FileAccess.Read,
-                FileShare.ReadWrite))
-            using (var package = new ExcelPackage(stream))
+            using (var stream = File.Open(_excelPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var reader = ExcelReaderFactory.CreateReader(stream))
             {
-                var sheet = package.Workbook.Worksheets.FirstOrDefault();
-                if (sheet == null || sheet.Dimension == null)
-                    return null;
-
-                int lastRow = sheet.Dimension.End.Row;
-                for (int row = 2; row <= lastRow; row++)
+                var conf = new ExcelDataSetConfiguration
                 {
-                    var osCell = sheet.Cells[row, 2].Text.Trim();
-                    var ufCell = sheet.Cells[row, 5].Text.Trim();
-                    if (string.Equals(osCell, numOS, StringComparison.OrdinalIgnoreCase) &&
-                        string.Equals(ufCell, uf, StringComparison.OrdinalIgnoreCase))
+                    ConfigureDataTable = _ => new ExcelDataTableConfiguration { UseHeaderRow = true }
+                };
+                var ds = reader.AsDataSet(conf);
+                var table = ds.Tables["Manutenção AC_MT"]
+                            ?? throw new Exception("Aba 'Manutenção AC_MT' não encontrada.");
+
+                foreach (DataRow row in table.Rows)
+                {
+                    var osCell = row["NUMOS"]?.ToString().Trim();
+                    if (!string.Equals(osCell, numOS, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    // extrai os dois primeiros caracteres como UF
+                    var ufFromNumos = osCell.Length >= 2
+                        ? osCell.Substring(0, 2).ToUpper()
+                        : "";
+
+                    return new ClientRecord
                     {
-                        return new ClientRecord
-                        {
-                            NumOS = osCell,
-                            NomeCliente = sheet.Cells[row, 4].Text.Trim(),
-                            UF = ufCell,
-                            NomeArquivoBase = sheet.Cells[row, 6].Text.Trim()
-                        };
-                    }
+                        Rota = row["ROTA"]?.ToString().Trim(),
+                        Tipo = row["TIPO"]?.ToString().Trim().ToUpper(),
+                        NumOS = osCell,
+                        NumOcorrencia = row["NUMOCORRENCIA"]?.ToString().Trim(),
+                        Obra = row["OBRA"]?.ToString().Trim(),
+                        IdSigfi = row["IDSIGFI"]?.ToString().Trim(),
+                        UC = row["UC"]?.ToString().Trim(),
+                        NomeCliente = row["NOMECLIENTE"]?.ToString().Trim(),
+                        Empresa = row["EMPRESA"]?.ToString().Trim().ToUpper(),
+                        TipoDesigfi = row["TIPODESIGFI"]?.ToString().Trim().ToUpper(),
+                        UF = ufFromNumos,
+                        NomeArquivoBase = ""  // continua gerado depois
+                    };
                 }
             }
 
             return null;
+        }
+
+
+        /// <summary>
+        /// Retorna a lista de rotas distintas da planilha, para popular o ComboBox de fallback.
+        /// </summary>
+        public IList<string> GetRouteList()
+        {
+            if (!File.Exists(_excelPath))
+                return Array.Empty<string>();
+
+            using (var stream = File.Open(_excelPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var reader = ExcelReaderFactory.CreateReader(stream))
+            {
+                var conf = new ExcelDataSetConfiguration
+                {
+                    ConfigureDataTable = _ => new ExcelDataTableConfiguration
+                    {
+                        UseHeaderRow = true
+                    }
+                };
+                var ds = reader.AsDataSet(conf);
+                var table = ds.Tables["Manutenção AC_MT"];
+                if (table == null) return Array.Empty<string>();
+
+                return table.Rows
+                            .Cast<DataRow>()
+                            .Select(r => r["ROTA"]?.ToString().Trim())
+                            .Where(s => !string.IsNullOrEmpty(s))
+                            .Distinct()
+                            .OrderBy(s => s)
+                            .ToList();
+            }
         }
     }
 }
