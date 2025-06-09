@@ -68,11 +68,11 @@ namespace OrganizadorArquivosWPF.Services
         }
 
 
-        public void Info(string msg) => Add("INFO", "✅ " + msg);
-        public void Warning(string msg) => Add("WARN", "⚠️ " + msg);
-        public void Error(string msg) => Add("ERROR", "❌ " + msg);
-        public void Critical(string msg) => Add("CRITICAL", "🛑 " + msg);
-        main
+        public void Info(string msg) => Add("INFO", "✅", msg);
+        public void Warning(string msg) => Add("WARN", "⚠️", msg);
+        public void Error(string msg) => Add("ERROR", "❌", msg);
+        public void Critical(string msg) => Add("CRITICAL", "🛑", msg);
+
 
         /// <summary>
         /// Loga informações de contexto (empresa, sistema, usuário, etc) em bloco.
