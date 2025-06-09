@@ -29,9 +29,9 @@ namespace OrganizadorArquivosWPF.Services
             _logFilePath = Path.Combine(dir, "log.txt");
         }
 
-        private void Add(string tipo, string mensagem)
+        private void Add(string tipo, string emoji, string mensagem)
         {
-            var entry = new LogEntry(tipo, mensagem);
+            var entry = new LogEntry(tipo, emoji, mensagem);
 
             // Atualiza a UI de forma thread-safe
             _dispatcher.Invoke(() => _logs.Add(entry));
@@ -41,8 +41,11 @@ namespace OrganizadorArquivosWPF.Services
             {
                 try
                 {
+                    var texto = string.IsNullOrEmpty(emoji)
+                        ? entry.Mensagem
+                        : emoji + " " + entry.Mensagem;
                     File.AppendAllText(_logFilePath,
-                        $"{entry.Hora:yyyy-MM-dd HH:mm:ss} [{entry.Tipo}] {entry.Mensagem}{Environment.NewLine}");
+                        $"{entry.Hora:yyyy-MM-dd HH:mm:ss} [{entry.Tipo}] {texto}{Environment.NewLine}");
                     _logIoErrorNotified = false;
                 }
                 catch (IOException ex)
@@ -64,10 +67,10 @@ namespace OrganizadorArquivosWPF.Services
             }
         }
 
-        public void Info(string msg) => Add("INFO", "✅ " + msg);
-        public void Warning(string msg) => Add("WARN", "⚠️ " + msg);
-        public void Error(string msg) => Add("ERROR", "❌ " + msg);
-        public void Critical(string msg) => Add("CRITICAL", "🛑 " + msg);
+        public void Info(string msg) => Add("INFO", "✅", msg);
+        public void Warning(string msg) => Add("WARN", "⚠️", msg);
+        public void Error(string msg) => Add("ERROR", "❌", msg);
+        public void Critical(string msg) => Add("CRITICAL", "🛑", msg);
 
         /// <summary>
         /// Loga informações de contexto (empresa, sistema, usuário, etc) em bloco.
@@ -79,7 +82,7 @@ namespace OrganizadorArquivosWPF.Services
             foreach (var kv in dados)
                 sb.AppendLine($"{kv.Key}: {kv.Value}");
             sb.AppendLine("=============================");
-            Add("INFO", sb.ToString());
+            Add("INFO", string.Empty, sb.ToString());
         }
 
         /// <summary>
@@ -90,7 +93,10 @@ namespace OrganizadorArquivosWPF.Services
             var sb = new StringBuilder();
             foreach (var entry in _logs)
             {
-                sb.AppendLine($"{entry.Hora:yyyy-MM-dd HH:mm:ss} [{entry.Tipo}] {entry.Mensagem}");
+                var texto = string.IsNullOrEmpty(entry.Emoji)
+                    ? entry.Mensagem
+                    : entry.Emoji + " " + entry.Mensagem;
+                sb.AppendLine($"{entry.Hora:yyyy-MM-dd HH:mm:ss} [{entry.Tipo}] {texto}");
             }
             return sb.ToString();
         }

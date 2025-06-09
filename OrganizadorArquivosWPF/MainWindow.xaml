@@ -328,6 +328,13 @@
                                                BasedOn="{StaticResource CellCenter}"/>
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
+                                <DataGridTextColumn Header="" Width="40"
+                                                    Binding="{Binding Emoji}">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock"
+                                               BasedOn="{StaticResource CellCenter}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
                                 <DataGridTextColumn Header="Mensagem" Width="*"
                                                     Binding="{Binding Mensagem}">
                                     <DataGridTextColumn.ElementStyle>
