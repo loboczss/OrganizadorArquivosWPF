@@ -129,9 +129,20 @@ namespace OrganizadorArquivosWPF
             var reporter = new BarProgress(this);
 
             // Monta chave de busca: UF + número da OS
-            var osNum = TxtOS.Text.Trim();
+            var osInput = TxtOS.Text.Trim();
+
+            // Caso o usuário digite o prefixo da UF junto ao número,
+            // removemos esse prefixo para evitar duplicação.
+            string typedUf = null;
+            if (osInput.Length >= 2 && char.IsLetter(osInput[0]) && char.IsLetter(osInput[1]))
+            {
+                typedUf = osInput.Substring(0, 2).ToUpperInvariant();
+                osInput = osInput.Substring(2);
+            }
+
             var ufItem = CmbUF.SelectedItem as ComboBoxItem;
-            var uf = ufItem?.Content.ToString() ?? osNum.Substring(0, 2).ToUpperInvariant();
+            var uf = ufItem?.Content.ToString() ?? typedUf ?? (osInput.Length >= 2 ? osInput.Substring(0, 2).ToUpperInvariant() : string.Empty);
+            var osNum = osInput;
             var fullOS = uf + osNum;
 
             _log.Info("Buscando na base de dados…");
