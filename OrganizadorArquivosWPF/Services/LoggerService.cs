@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Windows.Threading;
 using OrganizadorArquivosWPF.Models;
 
@@ -11,11 +13,13 @@ namespace OrganizadorArquivosWPF.Services
         private readonly string _logFilePath;
         private readonly ObservableCollection<LogEntry> _logs;
         private readonly Dispatcher _dispatcher;
+        private readonly object _fileLock = new object();
+        private bool _logIoErrorNotified = false;
 
         public LoggerService(ObservableCollection<LogEntry> logs, Dispatcher dispatcher)
         {
-            _logs = logs;
-            _dispatcher = dispatcher;
+            _logs = logs ?? throw new ArgumentNullException(nameof(logs));
+            _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
 
             var dir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -29,17 +33,98 @@ namespace OrganizadorArquivosWPF.Services
         {
             var entry = new LogEntry(tipo, mensagem);
 
+            // Atualiza a UI de forma thread-safe
             _dispatcher.Invoke(() => _logs.Add(entry));
-            try
+
+            // Grava em disco de forma thread-safe
+            lock (_fileLock)
             {
-                File.AppendAllText(_logFilePath,
-                    $"{entry.Hora:yyyy-MM-dd HH:mm:ss} [{entry.Tipo}] {entry.Mensagem}{Environment.NewLine}");
+                try
+                {
+                    File.AppendAllText(_logFilePath,
+                        $"{entry.Hora:yyyy-MM-dd HH:mm:ss} [{entry.Tipo}] {entry.Mensagem}{Environment.NewLine}");
+                    _logIoErrorNotified = false;
+                }
+                catch (IOException ex)
+                {
+                    if (!_logIoErrorNotified)
+                    {
+                        Critical("Falha ao gravar log em disco: " + ex.Message);
+                        _logIoErrorNotified = true;
+                    }
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    if (!_logIoErrorNotified)
+                    {
+                        Critical("Sem permissão para gravar log em disco: " + ex.Message);
+                        _logIoErrorNotified = true;
+                    }
+                }
             }
-            catch { /* ignorar falha de IO */ }
         }
 
         public void Info(string msg) => Add("INFO", msg);
         public void Warning(string msg) => Add("WARN", msg);
         public void Error(string msg) => Add("ERROR", msg);
+        public void Critical(string msg) => Add("CRITICAL", msg);
+
+        /// <summary>
+        /// Loga informações de contexto (empresa, sistema, usuário, etc) em bloco.
+        /// </summary>
+        public void ContextInfo(string titulo, IDictionary<string, string> dados)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("======= " + titulo + " =======");
+            foreach (var kv in dados)
+                sb.AppendLine($"{kv.Key}: {kv.Value}");
+            sb.AppendLine("=============================");
+            Add("INFO", sb.ToString());
+        }
+
+        /// <summary>
+        /// Retorna todo o log em memória (sem tocar no arquivo).
+        /// </summary>
+        public string GetFullLog()
+        {
+            var sb = new StringBuilder();
+            foreach (var entry in _logs)
+            {
+                sb.AppendLine($"{entry.Hora:yyyy-MM-dd HH:mm:ss} [{entry.Tipo}] {entry.Mensagem}");
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Sobrescreve o arquivo de log.txt com todo o log em memória.
+        /// </summary>
+        public void ExportFullLog()
+        {
+            var fullLog = GetFullLog();
+            lock (_fileLock)
+            {
+                try
+                {
+                    File.WriteAllText(_logFilePath, fullLog);
+                    _logIoErrorNotified = false;
+                }
+                catch (IOException ex)
+                {
+                    if (!_logIoErrorNotified)
+                    {
+                        Critical("Falha ao exportar log: " + ex.Message);
+                        _logIoErrorNotified = true;
+                    }
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    if (!_logIoErrorNotified)
+                    {
+                        Critical("Sem permissão para exportar log: " + ex.Message);
+                        _logIoErrorNotified = true;
+                    }
+                }
+            }
+        }
     }
 }

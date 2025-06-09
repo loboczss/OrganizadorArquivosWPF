@@ -1,52 +1,51 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
+using System.Reflection;
 using System.Threading.Tasks;
-using System.Windows;
+using Newtonsoft.Json.Linq;
 
 namespace OrganizadorArquivosWPF.Services
 {
-    public enum UpdateOutcome { Launched, NotFound, Error }
-
     public class AtualizadorService
     {
-        /// <summary>
-        /// Em vez de baixar/extrair aqui, dispara o updater externo e devolve o resultado.
-        /// Não fecha o app principal—o batch do updater cuidará de matar o processo
-        /// apenas quando o usuário confirmar a atualização na janela externa.
-        /// </summary>
-        public Task<UpdateOutcome> CheckForUpdateAsync(
-            bool manual,
-            IProgress<string> statusProgress,
-            IProgress<double> percentProgress)
+        private const string ApiUrl =
+            "https://api.github.com/repos/loboczss/OrganizadorArquivosWPF/releases/latest";
+
+        private static readonly string InstallDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "OneEngRenamer", "OrganizadorArquivosWPF");
+
+        public async Task<(Version LocalVersion, Version RemoteVersion)> GetVersionsAsync()
         {
+            // 1) Versão local
+            Version localVer = new Version(0, 0, 0, 0);
+            var exePath = Path.Combine(InstallDir, "OrganizadorArquivosWPF.exe");
+            if (File.Exists(exePath))
+            {
+                localVer = AssemblyName.GetAssemblyName(exePath).Version;
+            }
+
+            // 2) Versão remota
+            Version remoteVer = localVer;
             try
             {
-                // 1) Localiza o OneEngUpdater.exe dentro de win-x64
-                var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                var updaterExe = Path.Combine(baseDir, "win-x64", "OneEngUpdater.exe");
-
-                if (!File.Exists(updaterExe))
+                using (var http = new HttpClient())
                 {
-                    statusProgress.Report($"Atualizador não encontrado em:\n{updaterExe}");
-                    return Task.FromResult(UpdateOutcome.NotFound);
+                    http.DefaultRequestHeaders.Add("User-Agent", "OrganizadorArquivosWPF");
+                    var json = await http.GetStringAsync(ApiUrl);
+                    var obj = JObject.Parse(json);
+                    remoteVer = new Version(((string)obj["tag_name"]).TrimStart('v'));
                 }
-
-                // 2) Informa e inicia
-                statusProgress.Report("Abrindo atualizador...");
-                Process.Start(new ProcessStartInfo(updaterExe)
-                {
-                    UseShellExecute = true
-                });
-
-                // 3) Retorna imediatamente, sem fechar o app
-                return Task.FromResult(UpdateOutcome.Launched);
             }
-            catch (Exception ex)
+            catch
             {
-                statusProgress.Report("Erro ao iniciar o atualizador: " + ex.Message);
-                return Task.FromResult(UpdateOutcome.Error);
+                // sem internet ou erro → remote = local
             }
+
+            return (localVer, remoteVer);
         }
     }
 }
+
+

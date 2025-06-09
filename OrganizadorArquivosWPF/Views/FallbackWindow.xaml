@@ -2,132 +2,229 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Dados Manuais"
-        Width="360" Height="456"
+        Width="380" Height="400"
         WindowStartupLocation="CenterOwner"
         Background="#F2F2F2">
 
-	<!-- ────────── Recursos (mesmos do MainWindow) ────────── -->
-	<Window.Resources>
-		<!-- Cartão branco com sombra suave -->
-		<Style x:Key="CardStyle" TargetType="Border">
-			<Setter Property="Background"   Value="White"/>
-			<Setter Property="CornerRadius" Value="8"/>
-			<Setter Property="Padding"      Value="20"/>
-			<Setter Property="Margin"       Value="10"/>
-			<Setter Property="Effect">
-				<Setter.Value>
-					<DropShadowEffect Color="Black"
-                                      Opacity="0.15"
-                                      BlurRadius="15"
-                                      ShadowDepth="2"/>
-				</Setter.Value>
-			</Setter>
-		</Style>
+    <!-- ────────── Recursos ────────── -->
+    <Window.Resources>
+        <!-- Label consistente -->
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,8,0,4"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
 
-		<!-- TextBox com apenas borda inferior arredondada -->
-		<Style x:Key="BottomBorderTextBox" TargetType="TextBox">
-			<Setter Property="Background"      Value="Transparent"/>
-			<Setter Property="BorderBrush"     Value="#007ACC"/>
-			<Setter Property="BorderThickness" Value="0,0,0,2"/>
-			<Setter Property="Padding"         Value="4"/>
-			<Setter Property="Template">
-				<Setter.Value>
-					<ControlTemplate TargetType="TextBox">
-						<Border Background="{TemplateBinding Background}"
+        <!-- Cartão branco com sombra suave -->
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="10"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="Black"
+                                      Opacity="0.15"
+                                      BlurRadius="10"
+                                      ShadowDepth="2"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- TextBox com apenas borda inferior arredondada e realce de foco -->
+        <Style x:Key="BottomBorderTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="#007ACC"/>
+            <Setter Property="BorderThickness" Value="0,0,0,2"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="0,0,4,4">
-							<ScrollViewer x:Name="PART_ContentHost"/>
-						</Border>
-					</ControlTemplate>
-				</Setter.Value>
-			</Setter>
-		</Style>
+                            <ScrollViewer x:Name="PART_ContentHost"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="#005A9E"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.6"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
 
-		<!-- Botões arredondados -->
-		<ControlTemplate x:Key="RoundedButtonTemplate" TargetType="Button">
-			<Border Background="{TemplateBinding Background}"
+        <!-- ComboBox com borda inferior apenas -->
+        <Style x:Key="BottomBorderComboBox" TargetType="ComboBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="#007ACC"/>
+            <Setter Property="BorderThickness" Value="0,0,0,2"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Style.Triggers>
+                <Trigger Property="IsFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="#005A9E"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.6"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Template para botões arredondados -->
+        <ControlTemplate x:Key="RoundedButtonTemplate" TargetType="Button">
+            <Border Background="{TemplateBinding Background}"
                     CornerRadius="5"
                     Padding="{TemplateBinding Padding}">
-				<ContentPresenter HorizontalAlignment="Center"
+                <ContentPresenter HorizontalAlignment="Center"
                                   VerticalAlignment="Center"/>
-			</Border>
-		</ControlTemplate>
-		<Style x:Key="PrimaryButton" TargetType="Button">
-			<Setter Property="Template"       Value="{StaticResource RoundedButtonTemplate}"/>
-			<Setter Property="Background"     Value="#007ACC"/>
-			<Setter Property="Foreground"     Value="White"/>
-			<Setter Property="Padding"        Value="10,6"/>
-			<Setter Property="FontWeight"     Value="Bold"/>
-			<Setter Property="Cursor"         Value="Hand"/>
-			<Setter Property="BorderThickness" Value="0"/>
-		</Style>
-		<Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
-			<Setter Property="Background" Value="#E81123"/>
-		</Style>
-	</Window.Resources>
+            </Border>
+        </ControlTemplate>
 
-	<!-- ────────── Layout ────────── -->
-	<Grid Margin="0,0,0,28">
-		<Border Style="{StaticResource CardStyle}" Margin="10,30,10,28">
-			<StackPanel>
+        <!-- Botão principal -->
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Template" Value="{StaticResource RoundedButtonTemplate}"/>
+            <Setter Property="Background" Value="#007ACC"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#338FDA"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#005A9E"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#CCCCCC"/>
+                    <Setter Property="Foreground" Value="#888888"/>
+                    <Setter Property="Cursor" Value="Arrow"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
 
-				<!-- Número da OS -->
-				<TextBlock Text="Número da OS:" FontWeight="Bold" Margin="0,0,0,6"/>
-				<TextBox x:Name="TxtOSFull"
+        <!-- Botão de perigo -->
+        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="#E81123"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#F1707A"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#C50F1F"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#E0A0A8"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <!-- ────────── Layout reorganizado ────────── -->
+    <Grid Margin="10">
+        <Border Style="{StaticResource CardStyle}">
+            <Grid Margin="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <!-- OS Label -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- OS TextBox -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- ID SIGFI + Rota -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- Checkbox -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- Cliente -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- Botões -->
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Número da OS -->
+                <TextBlock Grid.Row="0" Grid.ColumnSpan="2"
+                           Text="Número da OS:" Style="{StaticResource FieldLabel}"/>
+
+                <TextBox Grid.Row="1" Grid.ColumnSpan="2"
+                         x:Name="TxtOSFull"
                          Style="{StaticResource BottomBorderTextBox}"
-                         FontSize="18"
-                         IsReadOnly="True"/>
+                         IsReadOnly="True"
+                         TabIndex="1"/>
 
-				<!-- ID SIGFI -->
-				<TextBlock Text="ID SIGFI:" FontWeight="Bold" Margin="0,12,0,6"/>
-				<TextBox x:Name="TxtIdSigfi"
-                         Style="{StaticResource BottomBorderTextBox}"
-                         FontSize="18"
-                         TextChanged="TxtIdSigfi_TextChanged"/>
+                <!-- ID SIGFI -->
+                <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,10,116,35" Grid.ColumnSpan="2" Grid.RowSpan="2">
+                    <TextBlock Text="ID SIGFI:" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="TxtIdSigfi"
+                             Style="{StaticResource BottomBorderTextBox}"
+                             TextChanged="TxtIdSigfi_TextChanged"
+                             TabIndex="2"
+                             Height="32" Width="159"/>
+                </StackPanel>
 
-				<!-- Rota -->
-				<TextBlock Text="Rota:" FontWeight="Bold" Margin="0,12,0,6"/>
-				<!-- ComboBox estreito dentro de borda inferior -->
-				<Border BorderBrush="#007ACC"
-                        BorderThickness="0,0,0,2"
-                        CornerRadius="0,0,4,4"
-                        Background="Transparent">
-					<ComboBox x:Name="CmbRota"
-                              Background="Transparent"
-                              BorderThickness="0"
-                              Padding="4"
-                              Width="297"
+                <!-- Rota -->
+                <StackPanel Grid.Row="2" Grid.Column="1" Margin="55,10,0,0">
+                    <TextBlock Text="Rota:" Style="{StaticResource FieldLabel}" Width="81"/>
+                    <ComboBox x:Name="CmbRota"
+                              Style="{StaticResource BottomBorderComboBox}"
+                              IsEditable="False"
                               SelectionChanged="CmbRota_Changed"
-                              IsEditable="False">
-						<ComboBoxItem Content="— selecione —"/>
-					</ComboBox>
-				</Border>
+                              TabIndex="3"
+                              Height="30" Width="80">
+                        <ComboBoxItem Content="— selecione —"/>
+                        <!-- rotas preenchidas no code-behind -->
+                    </ComboBox>
+                </StackPanel>
 
-				<!-- Checkbox para 160 -->
-				<CheckBox x:Name="Chk160"
-                          Content="Sistema 160 (2 controladores)?"
-                          Margin="0,12,0,0"
+                <!-- Checkbox -->
+                <CheckBox Grid.Row="3" Grid.ColumnSpan="2"
+                          x:Name="Chk160"
+                          Content="Sistema com 2 controladores?"
+                          Margin="0,20,0,0"
                           Checked="Chk160_Checked"
-                          Unchecked="Chk160_Checked"/>
+                          Unchecked="Chk160_Checked"
+                          TabIndex="4"/>
 
-				<!-- Botões OK / Cancelar -->
-				<StackPanel Orientation="Horizontal"
+                <!-- Label do Cliente -->
+                <Label Grid.Row="4" Grid.ColumnSpan="2"
+                       x:Name="LblCliente"
+                       Content="Cliente não identificado"
+                       Margin="0,16,0,0"
+                       FontWeight="Bold"
+                       FontSize="11"/>
+
+                <!-- Botões OK / Cancelar -->
+                <StackPanel Grid.Row="5" Grid.ColumnSpan="2"
+                            Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             Margin="0,20,0,0">
-					<Button x:Name="BtnOk"
+                    <Button x:Name="BtnOk"
                             Content="OK"
                             Style="{StaticResource PrimaryButton}"
                             Width="80"
                             IsEnabled="False"
-                            Click="Ok_Click"/>
-					<Button Content="Cancelar"
+                            Click="Ok_Click"
+                            TabIndex="5"/>
+                    <Button Content="Cancelar"
                             Style="{StaticResource DangerButton}"
                             Width="80"
                             Margin="10,0,0,0"
-                            Click="Cancel_Click"/>
-				</StackPanel>
-			</StackPanel>
-		</Border>
-	</Grid>
+                            Click="Cancel_Click"
+                            TabIndex="6"/>
+                </StackPanel>
+
+            </Grid>
+        </Border>
+    </Grid>
 </Window>

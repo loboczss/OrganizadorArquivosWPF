@@ -2,264 +2,173 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;   // EnableWindow
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using Microsoft.Win32;
+using Ookii.Dialogs.Wpf;
 using OrganizadorArquivosWPF.Models;
 using OrganizadorArquivosWPF.Services;
 using OrganizadorArquivosWPF.Views;
-using Ookii.Dialogs.Wpf;
 
 namespace OrganizadorArquivosWPF
 {
+    /// <summary>
+    /// Janela principal do Organizador de Arquivos.
+    /// </summary>
     public partial class MainWindow : Window
     {
-        // Win32: bloqueia/solta completamente a janela
-        [DllImport("user32.dll")]
-        private static extern bool EnableWindow(IntPtr hWnd, bool bEnable);
+        // Usuário autenticado
+        private readonly UsuarioRecord _usuario;
 
-        private readonly ExcelService _excel;
-        private readonly LoggerService _log;
-        private readonly RenamerService _renamer;
-        private readonly AtualizadorService _update;
-        private readonly ObservableCollection<LogEntry> _logs;
+        // Nome da pasta padrão na área de trabalho
+        private const string PastaDefaultNome = "SALVAR AQUI";
 
-        private bool _devMode;
-        private string _devPath = "";
-        private string _pastaOrigem = "";
-
-        public MainWindow()
+        #region Progresso UI
+        private sealed class BarProgress : IProgress<int>
         {
+            private readonly MainWindow _wnd;
+            public BarProgress(MainWindow wnd) => _wnd = wnd;
+            public void Report(int value)
+                => _wnd.Dispatcher.Invoke(() => _wnd.Progress.Value = value);
+        }
+        #endregion
+
+        #region Campos e serviços (mais “leves”)
+        private ExcelService _excel;               // passado a instanciar só quando precisar
+        private LoggerService _log;
+        private RenamerService _renamer;
+        private AtualizadorService _update;
+        private readonly ObservableCollection<LogEntry> _logs;
+        private string _pastaOrigem;
+        #endregion
+
+        /// <summary>
+        /// Construtor: inicializa componentes e configurações mínimas de UI.
+        /// Não faz nada pesado aqui.
+        /// </summary>
+        public MainWindow(UsuarioRecord usuario)
+        {
+            _usuario = usuario ?? throw new ArgumentNullException(nameof(usuario));
             InitializeComponent();
 
-            // título + versão
-            var ver = Assembly.GetExecutingAssembly().GetName().Version;
-            Title = $"One Engenharia LTDA – Organizador de Arquivos (v{ver})";
-            LblVersao.Text = $"v{ver}";
-
-            // logs + auto-scroll
+            // Inicializa coleção de logs e serviço de log visual
             _logs = new ObservableCollection<LogEntry>();
+            _log = new LoggerService(_logs, Dispatcher);
+
+            // Ainda não instanciamos ExcelService, RenamerService, etc., para não travar
+            // Essas instâncias serão criadas em background em 'Window_Loaded'.
+
+            // Configura UI (labels, título e versões)
+            LblUsuario.Text = $"Usuário: {_usuario.NomeUsuario}";
+            var versao = Assembly.GetExecutingAssembly().GetName().Version;
+            Title = $"One Engenharia LTDA – Organizador de Arquivos (v{versao})";
+            LblVersao.Text = $"v{versao}";
+
+            // Configura Grid de logs para rolar automaticamente
             GridLog.ItemsSource = _logs;
-            _logs.CollectionChanged += (_, __) =>
+            _logs.CollectionChanged += (s, e) =>
             {
                 if (GridLog.Items.Count > 0)
                     GridLog.ScrollIntoView(GridLog.Items[GridLog.Items.Count - 1]);
             };
 
-            // serviços
-            _log = new LoggerService(_logs, Dispatcher);
-            _excel = new ExcelService();
-            _renamer = new RenamerService(_log);
-            _update = new AtualizadorService();
+            // Barra de progresso começa escondida
+            ConfigurarProgressBar();
 
-            RegisterForStartup();
+            // Exibe texto-padrão nas labels que serão preenchidas
+            TxtSyncStatus.Text = "Verificando sincronização...";
+            TxtSyncStatus.Foreground = Brushes.Gray;
 
-            // update silencioso no startup
-            if (Environment.GetCommandLineArgs().Contains("-startup"))
-            {
-                Loaded += async (_, __) =>
-                {
-                    await RunUpdateAsync();  // sem argumento
-                    Application.Current.Shutdown();
-                };
-            }
+            TxtLastUpdate.Text = "Carregando data do BD...";
+            TxtLastUpdate.Foreground = Brushes.Gray;
+
+            // Define pasta padrão (pode ser rápido o suficiente para rodar no construtor)
+            DefinirPastaPadrao();
+
+            // Assina evento Loaded para disparar o que é pesado em background
+            Loaded += MainWindow_Loaded;
         }
 
-        private void RegisterForStartup()
+        /// <summary>
+        /// Método que dispara quando a janela está prestes a aparecer.
+        /// Aqui entramos em background para tarefas de I/O e, depois, atualizamos a UI.
+        /// </summary>
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            try
+            // 1) Cria instâncias “pesadas” em background
+            //    - Instanciar ExcelService pode carregar bibliotecas COM do Excel, etc.
+            await Task.Run(() =>
             {
-                using (var rk = Registry.CurrentUser.OpenSubKey(
-                           @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true))
-                {
-                    var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                    var updaterPath = Path.Combine(baseDir, "win-x64", "OneEngUpdater.exe");
-                    rk.SetValue("CompillerLogUpdater", $"\"{updaterPath}\" -startup");
-                }
-            }
-            catch { /* silencioso */ }
+                _excel = new ExcelService();
+                var logFileService = new LogFileService();
+                _renamer = new RenamerService(_log, logFileService);
+                _update = new AtualizadorService();
+            });
+
+            // 2) Atualiza status de sincronização
+            await AtualizarStatusSincronizacaoAsync();
+
+            // 3) Atualiza data da base de dados
+            await AtualizarDataPlanilhaAsync();
         }
 
-        private async Task RunUpdateAsync()
-        {
-            // 1) bloqueia completamente a janela
-            var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-            EnableWindow(hwnd, false);
-            IsEnabled = false;
-
-            try
-            {
-                // 2) localiza e dispara o updater externo
-                var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                var updaterPath = Path.Combine(baseDir, "win-x64", "OneEngUpdater.exe");
-
-                if (!File.Exists(updaterPath))
-                {
-                    MessageBox.Show(
-                        $"Atualizador não encontrado:\n{updaterPath}",
-                        "Erro",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
-                    return;
-                }
-
-                Process.Start(new ProcessStartInfo(updaterPath)
-                {
-                    UseShellExecute = true
-                });
-
-                // 3) espera breve para feedback
-                await Task.Delay(500);
-            }
-            finally
-            {
-                // 4) reabilita a janela principal
-                EnableWindow(hwnd, true);
-                IsEnabled = true;
-            }
-        }
-
-        // 2) Chamadas atualizadas
-
-        private async void BtnCheckUpdate_Click(object sender, RoutedEventArgs e)
-        {
-            await RunUpdateAsync();  // sem argumento
-        }
-
-        private void BtnExportar_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                var desk = Environment.GetFolderPath(
-                    Environment.SpecialFolder.DesktopDirectory);
-                var file = Path.Combine(desk,
-                    $"Log_{DateTime.Now:yyyyMMdd_HHmm}.txt");
-                File.WriteAllLines(file,
-                    _logs.Select(l => $"{l.Hora:HH:mm:ss}\t{l.Tipo}\t{l.Mensagem}"));
-                MessageBox.Show($"Log salvo em:\n{file}",
-                                "Exportar Log",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Falha ao exportar: {ex.Message}",
-                                "Erro",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Error);
-            }
-        }
-
-        private void BtnSelecionar_Click(object sender, RoutedEventArgs e)
-        {
-            // 1) Carrega o último caminho ou Documentos
-            var last = Properties.Settings.Default.LastFolder;
-            if (string.IsNullOrWhiteSpace(last) || !Directory.Exists(last))
-                last = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-
-            // 2) Prepara o diálogo Vista
-            var dlg = new VistaFolderBrowserDialog
-            {
-                Description = "Selecione a pasta de origem",
-                UseDescriptionForTitle = true,
-                SelectedPath = last,
-                ShowNewFolderButton = true
-            };
-
-            // 3) Exibe e trata o resultado
-            if (dlg.ShowDialog(this) == true)
-            {
-                _pastaOrigem = dlg.SelectedPath;
-                TxtPasta.Text = Path.GetFileName(_pastaOrigem);
-                _log.Info($"Pasta selecionada: {_pastaOrigem}");
-
-                // 4) Salva para próxima vez
-                Properties.Settings.Default.LastFolder = _pastaOrigem;
-                Properties.Settings.Default.Save();
-            }
-        }
-
+        #region Botão Processar
         private async void BtnProcessar_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(_pastaOrigem) ||
-                string.IsNullOrWhiteSpace(TxtOS.Text))
+            if (string.IsNullOrWhiteSpace(_pastaOrigem) || string.IsNullOrWhiteSpace(TxtOS.Text))
             {
-                MessageBox.Show("Informe pasta e Nº OS.",
-                                "Aviso",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Warning);
+                MessageBox.Show("Informe pasta e Nº OS.",
+                                "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            BtnProcessar.IsEnabled = false;
-            Progress.Visibility = Visibility.Visible;
-            _log.Info("Buscando na planilha…");
+            ToggleUIBusy(true);
+            var reporter = new BarProgress(this);
 
-            // monta fullOS = UF + número puro
+            // Monta chave de busca: UF + número da OS
             var osNum = TxtOS.Text.Trim();
             var ufItem = CmbUF.SelectedItem as ComboBoxItem;
-            var uf = ufItem != null
-                        ? ufItem.Content.ToString()
-                        : osNum.Substring(0, 2).ToUpper();
+            var uf = ufItem?.Content.ToString() ?? osNum.Substring(0, 2).ToUpperInvariant();
             var fullOS = uf + osNum;
 
-            ClientRecord record = null;
+            _log.Info("Buscando na base de dados…");
+
+            ClientRecord record;
             try
             {
-                record = await Task.Run(() => _excel.GetRecord(fullOS, uf));
+                // O método GetRecord pode já usar _excel, 
+                // mas garantimos que _excel já está instanciado em Loaded.
+                record = await Task.Run(() => _excel.GetRecord(fullOS, uf, reporter));
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Erro ao ler planilha: {ex.Message}",
-                                "Erro",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Error);
+                _log.Error($"Erro ao ler base de dados: {ex.Message}");
+                MessageBox.Show($"Erro ao ler base de dados: {ex.Message}",
+                                "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                ToggleUIBusy(false);
+                return;
             }
 
             if (record == null)
             {
-                _log.Warning("OS não encontrada, abrindo dados manuais…");
-                var rotas = await Task.Run(() => _excel.GetRouteList());
-                var fb = new FallbackWindow(fullOS, rotas, uf)
-                { Owner = this };
-
-                if (fb.ShowDialog() != true)
+                _log.Warning("OS não encontrada – solicitando dados manuais…");
+                record = await MostrarFallbackAsync(fullOS, uf);
+                if (record == null)
                 {
-                    BtnProcessar.IsEnabled = true;
-                    Progress.Visibility = Visibility.Collapsed;
+                    ToggleUIBusy(false);
                     return;
                 }
-
-                // preenche record em modo manual
-                record = new ClientRecord
-                {
-                    NumOS = fullOS,
-                    UF = uf,
-                    Rota = fb.Rota,
-                    IdSigfi = fb.IdSigfi,
-                    Empresa = "HOPPECKE",
-                    TipoDesigfi = fb.Is160 ? "SIGFI160" : "",
-                    NomeCliente = ""    // vazio sinaliza modo manual
-                };
             }
 
-            // confirmação
-            if (MessageBox.Show($"Cliente:\n\n{record.NomeCliente}\n\nContinuar?",
-                                "Confirmação",
-                                MessageBoxButton.YesNo,
-                                MessageBoxImage.Question)
-                != MessageBoxResult.Yes)
+            if (!ConfirmarCliente(record.NomeCliente))
             {
-                BtnProcessar.IsEnabled = true;
-                Progress.Visibility = Visibility.Collapsed;
+                ToggleUIBusy(false);
                 return;
             }
 
-            // executa organização + renomeio
             try
             {
                 await _renamer.RenameAsync(
@@ -267,27 +176,223 @@ namespace OrganizadorArquivosWPF
                     record,
                     record.Empresa,
                     record.TipoDesigfi == "SIGFI160",
-                    _devMode,
-                    _devPath
-                );
-                BtnDesfazer.Visibility = Visibility.Visible;
+                    false,
+                    string.Empty,
+                    _usuario.NomeUsuario,
+                    _usuario.Matricula,
+                    reporter);
+
+                BtnAbrir.Visibility = Visibility.Visible;
             }
             catch (Exception ex)
             {
                 _log.Error($"Erro no renomeio: {ex.Message}");
+                MessageBox.Show($"Erro no renomeio: {ex.Message}",
+                                "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
-                BtnProcessar.IsEnabled = true;
-                Progress.Visibility = Visibility.Collapsed;
+                ToggleUIBusy(false);
             }
         }
 
-        private void BtnDesfazer_Click(object sender, RoutedEventArgs e)
+        private Task<ClientRecord> MostrarFallbackAsync(string fullOS, string uf)
         {
-            // agora abre a pasta onde os arquivos foram salvos
-            if (Directory.Exists(_renamer.LastDestination))
+            // Chamamos ShowDialog de forma síncrona, mas todo o trabalho de GetRouteList() 
+            // (pesado) pode rodar em background antes de abrir a janela.
+            return Task.Run(() =>
+            {
+                var rotaList = _excel.GetRouteList();
+                ClientRecord fallbackResult = null;
+
+                // Precisamos chamar ShowDialog na thread de UI → Dispatcher.Invoke
+                Dispatcher.Invoke(() =>
+                {
+                    var fb = new FallbackWindow(fullOS, rotaList, uf) { Owner = this };
+                    if (fb.ShowDialog() == true)
+                    {
+                        fallbackResult = new ClientRecord
+                        {
+                            NumOS = fullOS,
+                            UF = uf,
+                            Rota = fb.Rota,
+                            IdSigfi = fb.IdSigfi,
+                            Empresa = "HOPPECKE",
+                            TipoDesigfi = fb.Is160 ? "SIGFI160" : string.Empty,
+                            NomeCliente = fb.ClienteEncontrado ?? "[NOME DESCONHECIDO]"
+                        };
+                    }
+                });
+
+                return fallbackResult;
+            });
+        }
+
+        private bool ConfirmarCliente(string nomeCliente)
+        {
+            var result = MessageBox.Show(
+                $"Cliente:\n\n{nomeCliente}\n\nContinuar?",
+                "Confirmação",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                _log.Info($"Usuário confirmou o cliente: {nomeCliente}");
+                return true;
+            }
+
+            _log.Info($"Usuário NÃO confirmou o cliente: {nomeCliente}");
+            return false;
+        }
+        #endregion
+
+        #region Helpers UI
+        private void ToggleUIBusy(bool ativo)
+        {
+            BtnProcessar.IsEnabled = !ativo;
+            Progress.Visibility = ativo ? Visibility.Visible : Visibility.Collapsed;
+            if (!ativo) Progress.Value = 0;
+        }
+
+        private void DefinirPastaPadrao()
+        {
+            var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+            var defaultPath = Path.Combine(desktop, PastaDefaultNome);
+            Directory.CreateDirectory(defaultPath);
+
+            var ultima = Properties.Settings.Default.LastFolder;
+            _pastaOrigem =
+                !string.IsNullOrWhiteSpace(ultima) && Directory.Exists(ultima)
+                ? ultima
+                : defaultPath;
+
+            TxtPasta.Text = Path.GetFileName(_pastaOrigem);
+            _log.Info($"Pasta de origem: {_pastaOrigem}");
+        }
+
+        private void ConfigurarProgressBar()
+        {
+            Progress.Minimum = 0;
+            Progress.Maximum = 100;
+            Progress.IsIndeterminate = false;
+            Progress.Visibility = Visibility.Collapsed;
+        }
+
+        /// <summary>
+        /// Atualiza o status de sincronização (I/O leve: File.Exists ou rede).
+        /// </summary>
+        private async Task AtualizarStatusSincronizacaoAsync()
+        {
+            bool online = false;
+            try
+            {
+                // Se SyncVerifierService.ExcelPath for uma pasta de rede,
+                // o File.Exists já pode demorar. Então rodamos em Task.Run.
+                online = await Task.Run(() => File.Exists(SyncVerifierService.ExcelPath));
+            }
+            catch
+            {
+                // Qualquer erro → assume offline
+                online = false;
+                _log.Critical($"BD NÃO ESTÁ ONLINE PARE AGORA") ;
+            }
+
+            // Atualiza UI no Dispatcher
+            Dispatcher.Invoke(() =>
+            {
+                TxtSyncStatus.Text = online ? "BD online" : "BD offline";
+                TxtSyncStatus.Foreground = online ? Brushes.LimeGreen : Brushes.Red;
+            });
+        }
+
+        /// <summary>
+        /// Atualiza a data da base de dados consultando via ExcelService (pesado).
+        /// </summary>
+        private async Task AtualizarDataPlanilhaAsync()
+        {
+            string ultima = null;
+            try
+            {
+                ultima = await Task.Run(() => _excel.GetLastUpdate());
+            }
+            catch (Exception ex)
+            {
+                _log.Warning($"Falha ao obter data do base de dados: {ex.Message}");
+            }
+
+            Dispatcher.Invoke(() =>
+            {
+                if (!string.IsNullOrWhiteSpace(ultima))
+                {
+                    TxtLastUpdate.Text = $"Última atualização do base de dados: {ultima}";
+                    TxtLastUpdate.Foreground = Brushes.Black;
+                    _log.Info($"Última atualização do base de dados: {ultima}");
+                }
+                else
+                {
+                    TxtLastUpdate.Text = "Última atualização do base de dados: --";
+                    TxtLastUpdate.Foreground = Brushes.Red;
+                }
+            });
+        }
+        #endregion
+
+        #region Botões auxiliares e Atualização
+        private async void BtnCheckUpdate_Click(object sender, RoutedEventArgs e)
+        {
+            var prompt = new UpdatePromptWindow { Owner = this };
+            if (prompt.ShowDialog() == true && prompt.ShouldUpdate)
+                await RunUpdateAsync();
+        }
+
+        private async Task RunUpdateAsync()
+        {
+            var batPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
+                                       "win-x64",
+                                       "AtualizadorSilencioso.bat");
+            if (!File.Exists(batPath))
+            {
+                MessageBox.Show($"Arquivo de atualização não encontrado:\n{batPath}",
+                                "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = batPath,
+                UseShellExecute = true,
+                WorkingDirectory = Path.GetDirectoryName(batPath)
+            });
+
+            await Task.Delay(500);
+        }
+
+        private void BtnSelecionar_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new VistaFolderBrowserDialog
+            {
+                Description = "Selecione a pasta de origem",
+                UseDescriptionForTitle = true,
+                SelectedPath = _pastaOrigem,
+                ShowNewFolderButton = true
+            };
+
+            if (dlg.ShowDialog(this) == true)
+            {
+                _pastaOrigem = dlg.SelectedPath;
+                TxtPasta.Text = Path.GetFileName(_pastaOrigem);
+                _log.Info($"Pasta selecionada: {_pastaOrigem}");
+                Properties.Settings.Default.LastFolder = _pastaOrigem;
+                Properties.Settings.Default.Save();
+            }
+        }
+
+        private void BtnAbrir_Click(object sender, RoutedEventArgs e)
+        {
+            if (_renamer != null && Directory.Exists(_renamer.LastDestination))
                 Process.Start("explorer.exe", _renamer.LastDestination);
         }
+        #endregion
     }
 }

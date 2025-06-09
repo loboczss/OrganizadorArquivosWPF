@@ -2,45 +2,26 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="One Engenharia LTDA – Organizador de Arquivos"
-        Width="900" Height="600"
-        MinWidth="800" MinHeight="500"
+        Width="1020" Height="650"
+        MinWidth="820" MinHeight="540"
         WindowStartupLocation="CenterScreen"
-        Background="#F2F2F2">
+        Background="#f4f7fa">
 
-    <!-- ────────── Recursos ────────── -->
+    <!-- ——— Recursos ——— -->
     <Window.Resources>
-        <!-- Cartão branco com sombra suave -->
+
+        <!-- Cartão -->
         <Style x:Key="CardStyle" TargetType="Border">
-            <Setter Property="Background"   Value="White"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding"      Value="20"/>
-            <Setter Property="Margin"       Value="10"/>
+            <Setter Property="Background"   Value="#FAFAFE"/>
+            <Setter Property="CornerRadius" Value="13"/>
+            <Setter Property="Padding"      Value="32,26"/>
+            <Setter Property="Margin"       Value="22,14,22,12"/>
             <Setter Property="Effect">
                 <Setter.Value>
-                    <DropShadowEffect Color="Black"
-                                      Opacity="0.15"
-                                      BlurRadius="15"
+                    <DropShadowEffect Color="#223c5c"
+                                      Opacity="0.12"
+                                      BlurRadius="19"
                                       ShadowDepth="2"/>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- TextBox borda inferior -->
-        <Style x:Key="BottomBorderTextBox" TargetType="TextBox">
-            <Setter Property="Background"      Value="Transparent"/>
-            <Setter Property="BorderBrush"     Value="#007ACC"/>
-            <Setter Property="BorderThickness" Value="0,0,0,2"/>
-            <Setter Property="Padding"         Value="4"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TextBox">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="0,0,4,4">
-                            <ScrollViewer x:Name="PART_ContentHost"/>
-                        </Border>
-                    </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
@@ -48,7 +29,7 @@
         <!-- Botões -->
         <ControlTemplate x:Key="RoundedButtonTemplate" TargetType="Button">
             <Border Background="{TemplateBinding Background}"
-                    CornerRadius="5"
+                    CornerRadius="7"
                     Padding="{TemplateBinding Padding}">
                 <ContentPresenter HorizontalAlignment="Center"
                                   VerticalAlignment="Center"/>
@@ -59,190 +40,313 @@
             <Setter Property="Template"       Value="{StaticResource RoundedButtonTemplate}"/>
             <Setter Property="Background"     Value="#007ACC"/>
             <Setter Property="Foreground"     Value="White"/>
-            <Setter Property="Padding"        Value="10,6"/>
-            <Setter Property="FontWeight"     Value="Bold"/>
-            <Setter Property="Cursor"         Value="Hand"/>
+            <Setter Property="Padding"        Value="13,6"/>
+            <Setter Property="FontWeight"     Value="SemiBold"/>
+            <Setter Property="FontSize"       Value="15"/>
             <Setter Property="BorderThickness" Value="0"/>
-        </Style>
-
-        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
-            <Setter Property="Background" Value="#E81123"/>
-        </Style>
-
-        <Style x:Key="DevButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
-            <Setter Property="Background" Value="#CCCCCC"/>
-            <Setter Property="Foreground" Value="#333333"/>
-        </Style>
-
-        <Style x:Key="SuccessButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
-            <Setter Property="Background" Value="#59c130"/>
+            <Setter Property="Margin"         Value="0,0,10,0"/>
+            <Setter Property="Cursor"         Value="Hand"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#0585db"/>
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect Color="#007acc" BlurRadius="13"
+                                              ShadowDepth="1" Opacity="0.18"/>
+                        </Setter.Value>
+                    </Setter>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
-        <!-- ─── DataGrid / Log ─── -->
-        <!-- Cabeçalho -->
+        <Style x:Key="ProcessarButton" TargetType="Button"
+               BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="#48bc46"/>
+            <Setter Property="Margin"     Value="0,0,0,0"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#75ea7a"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="DangerButton" TargetType="Button"
+               BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="#F34C4C"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#ff8383"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- TextBox underline -->
+        <Style x:Key="BottomBorderTextBox" TargetType="TextBox">
+            <Setter Property="Background"      Value="Transparent"/>
+            <Setter Property="BorderBrush"     Value="#007ACC"/>
+            <Setter Property="BorderThickness" Value="0,0,0,2"/>
+            <Setter Property="Padding"         Value="8,5,8,5"/>
+            <Setter Property="Margin"          Value="0,0,13,0"/>
+            <Setter Property="FontSize"        Value="17"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="0,0,7,7">
+                            <ScrollViewer x:Name="PART_ContentHost"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- DataGrid Header -->
         <Style TargetType="DataGridColumnHeader">
-            <Setter Property="Background"                 Value="#E0E0E0"/>
-            <Setter Property="Foreground"                 Value="Black"/>
+            <Setter Property="Background"                 Value="#EDF4FB"/>
+            <Setter Property="Foreground"                 Value="#223c5c"/>
             <Setter Property="FontWeight"                 Value="Bold"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Setter Property="Padding"                    Value="8,4"/>
+            <Setter Property="Padding"                    Value="12,7"/>
+            <Setter Property="FontSize"                   Value="13"/>
         </Style>
 
-        <!-- Células: centralizadas + pretas -->
-        <Style x:Key="CellCenterBlack" TargetType="TextBlock">
+        <!-- Células (texto preto, herdam fundo da linha) -->
+        <Style x:Key="CellCenter" TargetType="TextBlock">
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="VerticalAlignment"   Value="Center"/>
-            <Setter Property="FontWeight"          Value="Bold"/>
+            <Setter Property="FontWeight"          Value="Normal"/>
             <Setter Property="TextWrapping"        Value="Wrap"/>
-            <Setter Property="Foreground"          Value="Black"/>
+            <Setter Property="Foreground"          Value="#1a1a1a"/>
         </Style>
 
-        <!-- Linhas: fundo por severidade, texto sempre preto -->
+        <!-- Linhas coloridas do log (pinta o BACKGROUND) -->
         <Style x:Key="LogRowStyle" TargetType="DataGridRow">
             <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="Black"/>
-            <Setter Property="MinHeight"  Value="28"/>
+            <!-- Info -->
+            <Setter Property="Foreground" Value="#1a1a1a"/>
+            <Setter Property="MinHeight"  Value="29"/>
             <Style.Triggers>
-                <DataTrigger Binding="{Binding Tipo}" Value="Info">
-                    <Setter Property="Background" Value="#EEFFEE"/>
-                </DataTrigger>
                 <DataTrigger Binding="{Binding Tipo}" Value="Warn">
-                    <Setter Property="Background" Value="#FFF7D9"/>
+                    <Setter Property="Background" Value="#fffce5"/>
+                    <!-- amarelo -->
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Tipo}" Value="Error">
-                    <Setter Property="Background" Value="#FFE8E8"/>
+                    <Setter Property="Background" Value="#fff1f1"/>
+                    <!-- vermelho -->
                 </DataTrigger>
             </Style.Triggers>
         </Style>
     </Window.Resources>
 
-    <!-- ────────── Layout Principal ────────── -->
+    <!-- ——— Layout Principal ——— -->
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="250"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition/>
+            <RowDefinition Height="Auto" MinHeight="38"/>
         </Grid.RowDefinitions>
 
         <!-- Painel Lateral -->
         <Border Grid.Row="0" Grid.Column="0"
-                Background="#007ACC" Padding="20" Grid.RowSpan="2">
-            <StackPanel>
-                <Image Source="logo.png" Height="100" HorizontalAlignment="Center" Margin="0,0,0,20"/>
-                <TextBlock Text="suporte@oneengenharia.com" Foreground="White" Margin="0,0,0,10"/>
-                <Button x:Name="BtnCheckUpdate" Content="Procurar Atualização"
-                        Style="{StaticResource SuccessButton}" Margin="0,0,0,10" Click="BtnCheckUpdate_Click"/>
-                <Button x:Name="BtnExportar" Content="Exportar Log"
-                        Style="{StaticResource DevButton}" Margin="0,0,0,20" Click="BtnExportar_Click"/>
-                <TextBlock Text="© 2025 One Engenharia" Foreground="White"/>
+                Background="#007ACC" Padding="20,24"
+                Grid.RowSpan="2" CornerRadius="0,14,14,0">  
+            <StackPanel VerticalAlignment="Stretch">
+
+                <!-- Logo e Título -->
+                <StackPanel HorizontalAlignment="Center" Margin="0,0,0,24">
+                    <Image Source="logo.png" Height="70" Margin="0,0,0,10"/>
+                    <TextBlock Text="Organizador de Arquivos" 
+                       FontWeight="Bold" FontSize="14" 
+                       Foreground="White" TextAlignment="Center"/>
+                    <TextBlock Text="One Engenharia LTDA"
+                       FontSize="12" Foreground="#B8E0F8"
+                       TextAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Botão Atualização em Destaque -->
+                <StackPanel Margin="0,0,0,20">
+                    <Button x:Name="BtnCheckUpdate" Content="Atualizar Agora"
+                    Style="{StaticResource PrimaryButton}"
+                    FontSize="16" FontWeight="Bold"
+                    Height="42" Padding="18,8"
+                    Background="White" Foreground="#007ACC"
+                    BorderThickness="0"
+                    Margin="0,0,0,0"
+                    Click="BtnCheckUpdate_Click">
+                        <Button.Effect>
+                            <DropShadowEffect Color="#003d4d" BlurRadius="14"
+                                      ShadowDepth="2" Opacity="0.3"/>
+                        </Button.Effect>
+                    </Button>
+                </StackPanel>
+
+                <!-- Informações de Suporte -->
+                <StackPanel Margin="0,0,0,20">
+                    <Separator Margin="0,4"/>
+                    <TextBlock Text="suporte@oneengenharia.com" 
+                       Foreground="#EEF6FB" FontSize="12" Margin="0,8,0,0"/>
+                    <TextBlock x:Name="LblVersao"
+                       Foreground="White" FontSize="11" FontStyle="Italic"/>
+                </StackPanel>
+
+                <!-- Rodapé -->
+                <StackPanel VerticalAlignment="Bottom" Margin="0,16,0,0">
+                    <TextBlock Text="© 2025 One Engenharia"
+                       Foreground="#B8E0F8" FontSize="11"/>
+                    <TextBlock x:Name="LblUsuario" 
+                       Foreground="White" FontStyle="Italic" FontSize="10" 
+                       Margin="0,4,0,0"/>
+                </StackPanel>
             </StackPanel>
         </Border>
 
+
         <!-- Conteúdo -->
-        <Grid Grid.Row="0" Grid.Column="1" Margin="0,0,10,0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+        <ScrollViewer Grid.Row="0" Grid.Column="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
 
-            <!-- Card Configuração -->
-            <Border Grid.Row="0" Style="{StaticResource CardStyle}">
-                <StackPanel>
-                    <TextBlock Text="Pasta de Origem:" FontWeight="Bold" Margin="0,0,0,6"/>
-                    <DockPanel Margin="0,0,0,12">
-                        <TextBox x:Name="TxtPasta" Style="{StaticResource BottomBorderTextBox}"
-                                 IsReadOnly="True" MinWidth="300" Width="508"/>
-                        <Button x:Name="BtnSelecionar" Content="Selecionar" Style="{StaticResource PrimaryButton}"
-                                Width="100" Margin="0,0,0,0" Click="BtnSelecionar_Click" DockPanel.Dock="Right" Height="38" />
-                    </DockPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <StackPanel Margin="0,0,24,0">
-                            <TextBlock Text="Nº OS:" FontWeight="Bold" Margin="0,0,0,6"/>
-                            <TextBox x:Name="TxtOS" Style="{StaticResource BottomBorderTextBox}"
-                                     MinWidth="150" FontSize="20" Width="298"/>
-                        </StackPanel>
-                        <StackPanel>
-                            <TextBlock Text="UF:" FontWeight="Bold" Margin="0,0,0,6"/>
-                            <Border BorderBrush="#007ACC" BorderThickness="0,0,0,2" CornerRadius="0,0,4,4">
-                                <ComboBox x:Name="CmbUF" Background="Transparent" BorderThickness="0"
-                                          Padding="8" Height="34" Width="60" SelectedIndex="0">
-                                    <ComboBoxItem Content="AC"/>
-                                    <ComboBoxItem Content="MT"/>
-                                </ComboBox>
-                            </Border>
-                        </StackPanel>
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                            <Button x:Name="BtnProcessar" Content="Processar" Style="{StaticResource PrimaryButton}"
-                                    Width="98" Margin="20,20,8,0" Click="BtnProcessar_Click" IsDefault="True"/>
-                            <Button x:Name="BtnDesfazer" Content="Abrir Destino" Style="{StaticResource DangerButton}"
-                                    Width="98" Margin="10,20,8,0" Click="BtnDesfazer_Click" Visibility="Collapsed" />
-                        </StackPanel>
+                <!-- ——— Card Configuração ——— -->
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Pasta de origem -->
+                        <Grid Grid.Row="0" Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Pasta de Origem" FontSize="15" FontWeight="SemiBold"
+                                           Foreground="#34495e"/>
+                                <TextBox x:Name="TxtPasta"
+                                         Style="{StaticResource BottomBorderTextBox}"
+                                         Height="34" FontSize="15" Margin="0,4,0,0" MinWidth="260"/>
+                            </StackPanel>
+
+                            <Button x:Name="BtnSelecionar" Grid.Column="1" Content="Selecionar"
+                                    Style="{StaticResource PrimaryButton}" Width="110" Height="34"
+                                    Margin="12,20,0,0" Click="BtnSelecionar_Click"/>
+                        </Grid>
+
+                        <!-- Nº OS / UF / Processar -->
+                        <Grid Grid.Row="1" Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,18,0">
+                                <TextBlock Text="Nº OS" FontSize="15" FontWeight="SemiBold"
+                                           Foreground="#34495e"/>
+                                <TextBox x:Name="TxtOS"
+                                         Style="{StaticResource BottomBorderTextBox}"
+                                         Height="34" FontSize="20" Margin="0,4,0,0"
+                                         FontWeight="Bold"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="UF" FontSize="15" FontWeight="SemiBold"
+                                           Foreground="#34495e"/>
+                                <Border BorderBrush="#007ACC" BorderThickness="0,0,0,2"
+                                        CornerRadius="0,0,4,4" Margin="0,4,0,0" Width="69">
+                                    <ComboBox x:Name="CmbUF"
+                                              Background="Transparent" BorderThickness="0"
+                                              Padding="8" Height="34" Width="70" FontSize="15"
+                                              SelectedIndex="0">
+                                        <ComboBoxItem Content="AC"/>
+                                        <ComboBoxItem Content="MT"/>
+                                    </ComboBox>
+                                </Border>
+                            </StackPanel>
+
+                            <Button x:Name="BtnProcessar" Grid.Column="2" Content="Processar"
+                                    Style="{StaticResource ProcessarButton}"
+                                    Width="120" Height="38" Margin="14,20,0,0"
+                                    Click="BtnProcessar_Click" IsDefault="True"/>
+                        </Grid>
+
+                        <!-- Abrir destino -->
+                        <Button x:Name="BtnAbrir" Grid.Row="2" Content="Abrir Pasta Destino"
+                                Style="{StaticResource DangerButton}"
+                                Width="170" Height="38" HorizontalAlignment="Left"
+                                Click="BtnAbrir_Click" Visibility="Collapsed"/>
+
+                        <!-- Progress -->
+                        <ProgressBar x:Name="Progress" Grid.Row="3" Height="18" Margin="0,16,0,0"
+                                     IsIndeterminate="false" Visibility="Collapsed" Value="0"/>
+                    </Grid>
+                </Border>
+
+                <!-- ——— Card Log ——— -->
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Log de Operações" FontWeight="Bold" FontSize="16"
+                                   Margin="0,0,0,12"/>
+                        <DataGrid x:Name="GridLog"
+                                  AutoGenerateColumns="False" IsReadOnly="True"
+                                  RowStyle="{StaticResource LogRowStyle}"
+                                  GridLinesVisibility="None"
+                                  HeadersVisibility="Column"
+                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                  FontSize="12" CanUserResizeRows="False"
+                                  MinHeight="200" MaxHeight="350">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Hora" Width="110"
+                                                    Binding="{Binding Hora, StringFormat=HH:mm:ss}">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock"
+                                               BasedOn="{StaticResource CellCenter}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Tipo" Width="87"
+                                                    Binding="{Binding Tipo}">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock"
+                                               BasedOn="{StaticResource CellCenter}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Mensagem" Width="*"
+                                                    Binding="{Binding Mensagem}">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock"
+                                               BasedOn="{StaticResource CellCenter}">
+                                            <Setter Property="TextAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
                     </StackPanel>
-                    
-                    <ProgressBar x:Name="Progress" Height="20" Margin="0,12,0,0"
-                                 IsIndeterminate="True" Visibility="Collapsed"/>
-                </StackPanel>
-            </Border>
-
-            <!-- Card Log -->
-            <Border Grid.Row="1" Style="{StaticResource CardStyle}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0" Text="Log de Operações:" FontWeight="Bold" Margin="0,0,0,8"/>
-
-                    <DataGrid Grid.Row="1" x:Name="GridLog"
-                              AutoGenerateColumns="False" IsReadOnly="True"
-                              RowStyle="{StaticResource LogRowStyle}"
-                              GridLinesVisibility="None"
-                              HeadersVisibility="Column"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto"
-                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                              FontSize="12" CanUserResizeRows="False">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Hora" Width="100"
-                                                Binding="{Binding Hora, StringFormat=HH:mm:ss}">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock" BasedOn="{StaticResource CellCenterBlack}"/>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-
-                            <DataGridTextColumn Header="Tipo" Width="90"
-                                                Binding="{Binding Tipo}">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock" BasedOn="{StaticResource CellCenterBlack}"/>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-
-                            <DataGridTextColumn Header="Mensagem" Width="*"
-                                                Binding="{Binding Mensagem}">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock" BasedOn="{StaticResource CellCenterBlack}">
-                                        <Setter Property="TextAlignment" Value="Center"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Grid>
-            </Border>
-        </Grid>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
 
         <!-- Rodapé -->
-        <DockPanel Grid.Row="1" Grid.Column="1" Margin="10,5" LastChildFill="False">
-            <TextBlock x:Name="LblVersao" DockPanel.Dock="Left" VerticalAlignment="Center"
-                       Foreground="Gray" FontStyle="Italic"/>
-           
+        <DockPanel Grid.Row="1" Grid.Column="1" Margin="24,0,24,8"
+                   LastChildFill="False" Background="#f1f5f8" Height="38">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                        DockPanel.Dock="Left">
+                <TextBlock x:Name="TxtSyncStatus" FontWeight="Bold" FontSize="12"
+                           VerticalAlignment="Center" Margin="8,0,14,0"/>
+                <TextBlock x:Name="TxtLastUpdate" FontSize="12" Foreground="#3a558a"
+                           VerticalAlignment="Center" Margin="10,0,0,0"/>
+            </StackPanel>
         </DockPanel>
     </Grid>
 </Window>

@@ -1,50 +1,104 @@
-﻿// App.xaml.cs
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
+using OrganizadorArquivosWPF.Models;
+using OrganizadorArquivosWPF.Services;
+using OrganizadorArquivosWPF.Views;
 
 namespace OrganizadorArquivosWPF
 {
     public partial class App : Application
     {
-        protected override void OnStartup(StartupEventArgs e)
+        protected async override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
 
-            var args = Environment.GetCommandLineArgs();
-            if (args.Contains("-startup"))
+            // ------------------------------------------------------
+            // (Opcional) 0) Abre splash e executa sincronização
+            // ------------------------------------------------------
+            var splash = new SplashWindow();
+            splash.Owner = null;       // para não ficar “presa” a outra janela
+            splash.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            splash.Show();
+
+            // Dispara sincronização em background: não bloqueia a thread de UI
+            var syncTask = Task.Run(() => SyncVerifierService.VerificarOuSincronizarArquivo());
+
+            // Se quiser aguardar a sincronização COMPLETA antes de prosseguir,
+            // descomente a linha abaixo. Caso contrário, já dá pra liberar o login.
+            // await syncTask;
+
+            // Fecha splash após algum tempo ou imediatamente:
+            // - Se você fez await, ele espera terminar; 
+            // - Se não fez await, você pode fechar aqui ou aguardar a Task opcionalmente:
+            splash.Close();
+            // ------------------------------------------------------
+
+            // ------------------------------------------------------
+            // 1) Exibe Login
+            // ------------------------------------------------------
+            var login = new LoginWindow();
+            bool? loginOk = login.ShowDialog();
+            if (loginOk != true)
             {
-                // 1) Fecha qualquer janela que possa estar aberta
-                // (garante que não volte ao MainWindow)
-                ShutdownMode = ShutdownMode.OnExplicitShutdown;
-
-                // 2) Localiza o updater externo em win-x64
-                var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                var updaterPath = Path.Combine(baseDir, "win-x64", "OneEngUpdater.exe");
-
-                // 3) Se existir, dispara; senão, mostra erro
-                if (File.Exists(updaterPath))
-                {
-                    Process.Start(new ProcessStartInfo(updaterPath)
-                    {
-                        UseShellExecute = true
-                    });
-                }
-                else
-                {
-                    MessageBox.Show(
-                        $"Não foi possível encontrar o atualizador:\n{updaterPath}",
-                        "Erro ao Atualizar",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error
-                    );
-                }
-
-                // 4) Fecha o app principal imediatamente
-                Current.Shutdown();
+                // Usuário cancelou login
+                Shutdown();
+                return;
             }
+
+            UsuarioRecord user = login.Usuario;
+
+            // ------------------------------------------------------
+            // 2) Prompt de atualização antes de abrir o main
+            // ------------------------------------------------------
+            var updatePrompt = new UpdatePromptWindow();
+            bool? wantsUpdate = updatePrompt.ShowDialog();
+            if (wantsUpdate == true && updatePrompt.ShouldUpdate)
+            {
+                RunUpdaterBat();
+                Shutdown();
+                return;
+            }
+
+            // ------------------------------------------------------
+            // 3) Se não atualizou, continua para a MainWindow
+            // ------------------------------------------------------
+            var main = new MainWindow(user);
+            main.Closed += (_, __) => Shutdown();
+            Current.MainWindow = main;
+            main.Show();
+
+            // ------------------------------------------------------
+            // 4) (Opcional) Se você não esperou a syncTask, pode aguardar aqui
+            // ------------------------------------------------------
+            // await syncTask;
+            // Se a MainWindow usa dados que dependem do Excel, você pode
+            // atualizar a interface (ou mostrar um aviso) quando a Task terminar.
+        }
+
+        private void RunUpdaterBat()
+        {
+            string batPath = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "win-x64",
+                "AtualizadorSilencioso.bat");
+
+            if (!File.Exists(batPath))
+            {
+                MessageBox.Show(
+                    $"Arquivo de atualização não encontrado:\n{batPath}",
+                    "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = batPath,
+                UseShellExecute = true,
+                WorkingDirectory = Path.GetDirectoryName(batPath)
+            });
         }
     }
 }
