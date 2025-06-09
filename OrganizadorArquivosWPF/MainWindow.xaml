@@ -125,17 +125,24 @@
         <!-- Linhas coloridas do log (pinta o BACKGROUND) -->
         <Style x:Key="LogRowStyle" TargetType="DataGridRow">
             <Setter Property="Background" Value="White"/>
-            <!-- Info -->
             <Setter Property="Foreground" Value="#1a1a1a"/>
             <Setter Property="MinHeight"  Value="29"/>
             <Style.Triggers>
-                <DataTrigger Binding="{Binding Tipo}" Value="Warn">
-                    <Setter Property="Background" Value="#fffce5"/>
-                    <!-- amarelo -->
+                <DataTrigger Binding="{Binding Tipo}" Value="INFO">
+                    <Setter Property="Foreground" Value="Green"/>
                 </DataTrigger>
-                <DataTrigger Binding="{Binding Tipo}" Value="Error">
+                <DataTrigger Binding="{Binding Tipo}" Value="WARN">
+                    <Setter Property="Foreground" Value="Goldenrod"/>
+                    <Setter Property="Background" Value="#fffce5"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tipo}" Value="ERROR">
+                    <Setter Property="Foreground" Value="Red"/>
                     <Setter Property="Background" Value="#fff1f1"/>
-                    <!-- vermelho -->
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tipo}" Value="CRITICAL">
+                    <Setter Property="Foreground" Value="Red"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                    <Setter Property="Background" Value="#fff1f1"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -316,6 +323,13 @@
                                 </DataGridTextColumn>
                                 <DataGridTextColumn Header="Tipo" Width="87"
                                                     Binding="{Binding Tipo}">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock"
+                                               BasedOn="{StaticResource CellCenter}"/>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="" Width="40"
+                                                    Binding="{Binding Emoji}">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock"
                                                BasedOn="{StaticResource CellCenter}"/>
