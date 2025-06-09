@@ -45,7 +45,7 @@ namespace OrganizadorArquivosWPF.Services
             }
             catch (Exception ex)
             {
-                logger.Warning("Não foi possível criar " + logtxt + ex.Message);
+                logger.Warning("Não foi possível criar " + logtxt + " " + ex.Message);
             }
         }
     }
