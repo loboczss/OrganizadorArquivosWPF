@@ -306,7 +306,7 @@ namespace OrganizadorArquivosWPF
             {
                 // Qualquer erro → assume offline
                 online = false;
-                _log.Critical($"BD NÃO ESTÁ ONLINE PARE AGORA") ;
+                _log.Critical($"BD NÃO ESTÁ ONLINE PARE AGORA");
             }
 
             // Atualiza UI no Dispatcher
@@ -339,11 +339,30 @@ namespace OrganizadorArquivosWPF
                     TxtLastUpdate.Text = $"Última atualização do base de dados: {ultima}";
                     TxtLastUpdate.Foreground = Brushes.Black;
                     _log.Info($"Última atualização do base de dados: {ultima}");
+                    if (DateTime.TryParse(ultima, new System.Globalization.CultureInfo("pt-BR"),
+                                          System.Globalization.DateTimeStyles.None, out var dataUltima))
+                    {
+                        if ((DateTime.Now - dataUltima).TotalDays > 2)
+                        {
+                            MessageBox.Show(
+                                "A base de dados não é atualizada há mais de 2 dias.",
+                                "Aviso",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Error);
+                            _log.Warning($"A base de dados não é atualizada há mais de 2 dias.");
+                        }
+                    }
                 }
                 else
                 {
                     TxtLastUpdate.Text = "Última atualização do base de dados: --";
                     TxtLastUpdate.Foreground = Brushes.Red;
+                    MessageBox.Show(
+                                "A base de dados não está online",
+                                "Aviso CRITICO",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Warning);
+                    _log.Warning($"Falha ao obter dados da base de dados, por favor não continue");
                 }
             });
         }
