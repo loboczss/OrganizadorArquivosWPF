@@ -6,12 +6,14 @@ namespace OrganizadorArquivosWPF.Models
     {
         public DateTime Hora { get; set; }
         public string Tipo { get; set; }
+        public string Emoji { get; set; }
         public string Mensagem { get; set; }
 
-        public LogEntry(string tipo, string mensagem)
+        public LogEntry(string tipo, string emoji, string mensagem)
         {
             Hora = DateTime.Now;
             Tipo = tipo;
+            Emoji = emoji;
             Mensagem = mensagem;
         }
     }
