@@ -186,7 +186,7 @@ namespace OrganizadorArquivosWPF
                     _pastaOrigem,
                     record,
                     record.Empresa,
-                    record.TipoDesigfi == "SIGFI160",
+                    record.TipoDesigfi,
                     false,
                     string.Empty,
                     _usuario.NomeUsuario,
@@ -229,7 +229,7 @@ namespace OrganizadorArquivosWPF
                             Rota = fb.Rota,
                             IdSigfi = fb.IdSigfi,
                             Empresa = "HOPPECKE",
-                            TipoDesigfi = fb.Is160 ? "SIGFI160" : string.Empty,
+                            TipoDesigfi = fb.TipoSistema,
                             NomeCliente = fb.ClienteEncontrado ?? "[NOME DESCONHECIDO]"
                         };
                     }

@@ -168,7 +168,7 @@ namespace OrganizadorArquivosWPF.Services
             string sourceFolder,
             ClientRecord record,
             string sistema,
-            bool isSistema160,
+            string tipoSistema,
             bool isDevMode,
             string devDestino,
             string nomeFuncionario,
@@ -178,6 +178,7 @@ namespace OrganizadorArquivosWPF.Services
             // Task.Run mantém compatibilidade com .NET 4.x (não há async streams etc.)
             return Task.Run(() =>
             {
+                bool isSistema160 = string.Equals(tipoSistema, "SIGFI160", StringComparison.OrdinalIgnoreCase);
                 int pct = 0;
                 void Report(int v) { pct = v; progress?.Report(v); }
 
@@ -204,7 +205,7 @@ namespace OrganizadorArquivosWPF.Services
                     { "Matrícula", matriculaFuncionario },
                     { "Empresa", RaizOneEng },
                     { "Tipo de Sistema", sistema },
-                    { "Sistema 160", isSistema160 ? "SIM" : "NÃO" },
+                    { "Sistema do Cliente", tipoSistema },
                     { "Versão do Programa", Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "(N/A)" },
                     { "Usuário Windows", Environment.UserName },
                     { "Data/Hora", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) },
