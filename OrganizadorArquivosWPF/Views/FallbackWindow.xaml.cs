@@ -19,6 +19,7 @@ namespace OrganizadorArquivosWPF.Views
         public string Rota { get; private set; }
         public string IdSigfi { get; private set; }
         public bool Is160 => Chk160.IsChecked == true;
+        public string TipoSistema => Is160 ? "SIGFI160" : "OUTRO";
 
         // Guarda a UF selecionada no MainWindow
         private readonly string _ufPrefixo;
