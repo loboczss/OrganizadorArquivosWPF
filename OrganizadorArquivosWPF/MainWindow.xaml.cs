@@ -329,14 +329,14 @@ namespace OrganizadorArquivosWPF
             }
             catch (Exception ex)
             {
-                _log.Warning($"Falha ao obter data do base de dados: {ex.Message}");
+                _log.Warning($"Falha ao obter data da base de dados: {ex.Message}");
             }
 
             Dispatcher.Invoke(() =>
             {
                 if (!string.IsNullOrWhiteSpace(ultima))
                 {
-                    TxtLastUpdate.Text = $"Última atualização do base de dados: {ultima}";
+                    TxtLastUpdate.Text = $"Última atualização da base de dados: {ultima}";
                     TxtLastUpdate.Foreground = Brushes.Black;
                     _log.Info($"Última atualização do base de dados: {ultima}");
                     if (DateTime.TryParse(ultima, new System.Globalization.CultureInfo("pt-BR"),
