@@ -41,6 +41,7 @@ namespace OrganizadorArquivosWPF
         private LoggerService _log;
         private RenamerService _renamer;
         private AtualizadorService _update;
+        private ManutencoesService _manutencoes;
         private readonly ObservableCollection<LogEntry> _logs;
         private string _pastaOrigem;
         #endregion
@@ -106,6 +107,7 @@ namespace OrganizadorArquivosWPF
                 var logFileService = new LogFileService();
                 _renamer = new RenamerService(_log, logFileService);
                 _update = new AtualizadorService();
+                _manutencoes = new ManutencoesService();
             });
 
             // 2) Atualiza status de sincronização
@@ -113,6 +115,9 @@ namespace OrganizadorArquivosWPF
 
             // 3) Atualiza data da base de dados
             await AtualizarDataPlanilhaAsync();
+
+            // 4) Baixa dados de manutenção se possível
+            try { await _manutencoes.ObterDadosAsync(); } catch { }
         }
 
         #region Botão Processar
