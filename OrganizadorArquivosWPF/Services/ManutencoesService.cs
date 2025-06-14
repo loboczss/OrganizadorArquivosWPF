@@ -4,7 +4,11 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json.Linq;
+
+using OrganizadorArquivosWPF.Models;
 using System.Xml.Linq;
 
 namespace OrganizadorArquivosWPF.Services
@@ -76,6 +80,66 @@ namespace OrganizadorArquivosWPF.Services
             }
         }
 
+        /// <summary>
+        /// Converte uma <see cref="JArray"/> em uma lista de <see cref="ClientRecord"/>.
+        /// </summary>
+        public static List<ClientRecord> ParseClientRecords(JArray array)
+        {
+            var list = new List<ClientRecord>();
+            if (array == null) return list;
+
+            foreach (JObject obj in array.OfType<JObject>())
+            {
+                string numos = obj.Value<string>("NUMOS") ?? string.Empty;
+                string uf = obj.Value<string>("UF") ?? (numos.Length >= 2 ? numos.Substring(0, 2).ToUpperInvariant() : string.Empty);
+
+                list.Add(new ClientRecord
+                {
+                    Rota = obj.Value<string>("ROTA") ?? string.Empty,
+                    Tipo = (obj.Value<string>("TIPO") ?? string.Empty).ToUpperInvariant(),
+                    NumOS = numos,
+                    NumOcorrencia = obj.Value<string>("NUMOCORRENCIA") ?? string.Empty,
+                    Obra = obj.Value<string>("OBRA") ?? string.Empty,
+                    IdSigfi = obj.Value<string>("IDSIGFI") ?? string.Empty,
+                    UC = obj.Value<string>("UC") ?? string.Empty,
+                    NomeCliente = obj.Value<string>("NOMECLIENTE") ?? string.Empty,
+                    Empresa = (obj.Value<string>("EMPRESA") ?? string.Empty).ToUpperInvariant(),
+                    TipoDesigfi = (obj.Value<string>("TIPODESIGFI") ?? string.Empty).ToUpperInvariant(),
+                    UF = uf,
+                    NomeArquivoBase = string.Empty
+                });
+            }
+
+            return list;
+        }
+
+        /// <summary>
+        /// Lê o arquivo JSON em cache e converte em registros de cliente.
+        /// </summary>
+        public List<ClientRecord> LoadCachedRecords()
+        {
+            if (!File.Exists(OfflinePath))
+                return new List<ClientRecord>();
+
+            try
+            {
+                var json = File.ReadAllText(OfflinePath, Encoding.UTF8);
+                var array = JArray.Parse(json);
+                return ParseClientRecords(array);
+            }
+            catch
+            {
+                return new List<ClientRecord>();
+            }
+        }
+
+        /// <summary>
+        /// Obtém os dados de manutenção e converte para registros de cliente.
+        /// </summary>
+        public async Task<List<ClientRecord>> ObterClientRecordsAsync()
+        {
+            var arr = await ObterDadosAsync();
+            return ParseClientRecords(arr);
         private static JArray ConverterXmlParaArray(string xml)
         {
             var arr = new JArray();
@@ -95,6 +159,7 @@ namespace OrganizadorArquivosWPF.Services
                 // retorna array vazio em caso de XML malformado
             }
             return arr;
+
         }
 
         private static bool TemInternet()

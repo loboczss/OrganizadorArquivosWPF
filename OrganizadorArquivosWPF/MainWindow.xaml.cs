@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -42,6 +43,7 @@ namespace OrganizadorArquivosWPF
         private RenamerService _renamer;
         private AtualizadorService _update;
         private ManutencoesService _manutencoes;
+        private List<ClientRecord> _cachedRecords;
         private readonly ObservableCollection<LogEntry> _logs;
         private string _pastaOrigem;
         #endregion
@@ -110,14 +112,16 @@ namespace OrganizadorArquivosWPF
                 _manutencoes = new ManutencoesService();
             });
 
+            // Carrega registros em memória (pode demorar um pouco)
+            _cachedRecords = await _manutencoes.ObterClientRecordsAsync();
+
             // 2) Atualiza status de sincronização
             await AtualizarStatusSincronizacaoAsync();
 
             // 3) Atualiza data da base de dados
             await AtualizarDataPlanilhaAsync();
 
-            // 4) Baixa dados de manutenção se possível
-            try { await _manutencoes.ObterDadosAsync(); } catch { }
+            // 4) Dados de manutenção já carregados em _cachedRecords
         }
 
         #region Botão Processar
@@ -155,9 +159,18 @@ namespace OrganizadorArquivosWPF
             ClientRecord record;
             try
             {
-                // O método GetRecord pode já usar _excel, 
-                // mas garantimos que _excel já está instanciado em Loaded.
-                record = await Task.Run(() => _excel.GetRecord(fullOS, uf, reporter));
+                record = await Task.Run(() =>
+                {
+                    int total = _cachedRecords.Count;
+                    for (int i = 0; i < total; i++)
+                    {
+                        reporter.Report((int)((i + 1) * 100.0 / total));
+                        var r = _cachedRecords[i];
+                        if (r.NumOS.Equals(fullOS, StringComparison.OrdinalIgnoreCase))
+                            return r;
+                    }
+                    return null;
+                });
             }
             catch (Exception ex)
             {
@@ -218,13 +231,18 @@ namespace OrganizadorArquivosWPF
             // (pesado) pode rodar em background antes de abrir a janela.
             return Task.Run(() =>
             {
-                var rotaList = _excel.GetRouteList();
+                var rotaList = _cachedRecords
+                                .Select(r => r.Rota)
+                                .Where(r => !string.IsNullOrEmpty(r))
+                                .Distinct()
+                                .OrderBy(r => r)
+                                .ToList();
                 ClientRecord fallbackResult = null;
 
                 // Precisamos chamar ShowDialog na thread de UI → Dispatcher.Invoke
                 Dispatcher.Invoke(() =>
                 {
-                    var fb = new FallbackWindow(fullOS, rotaList, uf) { Owner = this };
+                    var fb = new FallbackWindow(fullOS, rotaList, uf, _cachedRecords) { Owner = this };
                     if (fb.ShowDialog() == true)
                     {
                         fallbackResult = new ClientRecord
