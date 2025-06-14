@@ -5,10 +5,8 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json.Linq;
 using OrganizadorArquivosWPF.Models;
 using System.Xml.Linq;
 
@@ -58,13 +56,8 @@ namespace OrganizadorArquivosWPF.Services
         /// </summary>
         public async Task<JArray> ObterDadosAsync()
         {
-            string json = null;
-
-
-            string json = null;
-            // texto em XML baixado da web
             string xml = null;
-
+            string json = null;
 
             if (TemInternet())
             {
@@ -72,43 +65,34 @@ namespace OrganizadorArquivosWPF.Services
                 {
                     using (var http = new HttpClient())
                     {
-                        json = await http.GetStringAsync(ApiUrl);
+                        xml = await http.GetStringAsync(ApiUrl);
+                        var array = ConverterXmlParaArray(xml);
+                        json = array.ToString();
+
                         Directory.CreateDirectory(Path.GetDirectoryName(OfflinePath));
                         File.WriteAllText(OfflinePath, json, Encoding.UTF8);
 
-                        xml = await http.GetStringAsync(ApiUrl);
-                        // valida e converte para JSON antes de salvar
-                        var array = ConverterXmlParaArray(xml);
-                        Directory.CreateDirectory(Path.GetDirectoryName(OfflinePath));
-                        File.WriteAllText(OfflinePath, array.ToString(), Encoding.UTF8);
-                        return array;
+                        _dados = array;
+                        return _dados;
                     }
                 }
                 catch
                 {
-                    json = null; // falha na conexão, tenta local
+                    // continua e tenta usar o cache offline
                 }
-            }
-
-
-            if (json == null)
-
-            if (json == null) {
-                    xml = null; // falha na conexão ou XML inválido
-            }
-
-            if (xml == null)
-
-            {
-                if (!File.Exists(OfflinePath))
-                    return new JArray();
-
-                json = File.ReadAllText(OfflinePath, Encoding.UTF8);
             }
 
             try
             {
-                _dados = JArray.Parse(json);
+                if (File.Exists(OfflinePath))
+                {
+                    json = File.ReadAllText(OfflinePath, Encoding.UTF8);
+                    _dados = JArray.Parse(json);
+                }
+                else
+                {
+                    _dados = new JArray();
+                }
             }
             catch
             {
@@ -116,28 +100,6 @@ namespace OrganizadorArquivosWPF.Services
             }
 
             return _dados;
-
-                return JArray.Parse(json);
-                try
-                {
-                    var offlineJson = File.ReadAllText(OfflinePath, Encoding.UTF8);
-                    return JArray.Parse(offlineJson);
-                }
-                catch
-                {
-                    return new JArray();
-                }
-            }
-
-            // Se chegamos aqui, temos XML baixado mas não salvo (por erro no salvamento)
-            try
-            {
-                return ConverterXmlParaArray(xml);
-            }
-            catch
-            {
-                return new JArray();
-            }
         }
 
         /// <summary>
