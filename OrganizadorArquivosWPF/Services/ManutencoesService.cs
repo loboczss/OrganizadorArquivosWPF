@@ -7,7 +7,9 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+
 using OrganizadorArquivosWPF.Models;
+using System.Xml.Linq;
 
 namespace OrganizadorArquivosWPF.Services
 {
@@ -28,7 +30,8 @@ namespace OrganizadorArquivosWPF.Services
         /// </summary>
         public async Task<JArray> ObterDadosAsync()
         {
-            string json = null;
+            // texto em XML baixado da web
+            string xml = null;
 
             if (TemInternet())
             {
@@ -36,28 +39,40 @@ namespace OrganizadorArquivosWPF.Services
                 {
                     using (var http = new HttpClient())
                     {
-                        json = await http.GetStringAsync(ApiUrl);
+                        xml = await http.GetStringAsync(ApiUrl);
+                        // valida e converte para JSON antes de salvar
+                        var array = ConverterXmlParaArray(xml);
                         Directory.CreateDirectory(Path.GetDirectoryName(OfflinePath));
-                        File.WriteAllText(OfflinePath, json, Encoding.UTF8);
+                        File.WriteAllText(OfflinePath, array.ToString(), Encoding.UTF8);
+                        return array;
                     }
                 }
                 catch
                 {
-                    json = null; // falha na conexão, tenta local
+                    xml = null; // falha na conexão ou XML inválido
                 }
             }
 
-            if (json == null)
+            if (xml == null)
             {
                 if (!File.Exists(OfflinePath))
                     return new JArray();
 
-                json = File.ReadAllText(OfflinePath, Encoding.UTF8);
+                try
+                {
+                    var offlineJson = File.ReadAllText(OfflinePath, Encoding.UTF8);
+                    return JArray.Parse(offlineJson);
+                }
+                catch
+                {
+                    return new JArray();
+                }
             }
 
+            // Se chegamos aqui, temos XML baixado mas não salvo (por erro no salvamento)
             try
             {
-                return JArray.Parse(json);
+                return ConverterXmlParaArray(xml);
             }
             catch
             {
@@ -125,6 +140,26 @@ namespace OrganizadorArquivosWPF.Services
         {
             var arr = await ObterDadosAsync();
             return ParseClientRecords(arr);
+        private static JArray ConverterXmlParaArray(string xml)
+        {
+            var arr = new JArray();
+            try
+            {
+                var doc = XDocument.Parse(xml);
+                foreach (var post in doc.Descendants("post"))
+                {
+                    var obj = new JObject();
+                    foreach (var el in post.Elements())
+                        obj[el.Name.LocalName] = el.Value;
+                    arr.Add(obj);
+                }
+            }
+            catch
+            {
+                // retorna array vazio em caso de XML malformado
+            }
+            return arr;
+
         }
 
         private static bool TemInternet()
