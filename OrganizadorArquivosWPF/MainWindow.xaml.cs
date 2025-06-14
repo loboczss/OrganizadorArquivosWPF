@@ -122,7 +122,17 @@ namespace OrganizadorArquivosWPF
             await AtualizarDataPlanilhaAsync();
 
             // 4) Baixa dados de manutenção se possível
+            try
+            {
+                await _manutencoes.ObterDadosAsync();
+            }
+            catch (Exception ex)
+            {
+                _log.Warning("Falha ao atualizar dados de manutenção: " + ex.Message);
+            }
+
             try { await _manutencoes.ObterDadosAsync(); } catch { }
+
         }
 
         #region Botão Processar

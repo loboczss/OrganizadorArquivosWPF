@@ -4,15 +4,14 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-
 using Newtonsoft.Json.Linq;
-
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
-
 using OrganizadorArquivosWPF.Models;
 using System.Xml.Linq;
+
 
 namespace OrganizadorArquivosWPF.Services
 {
@@ -27,6 +26,13 @@ namespace OrganizadorArquivosWPF.Services
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "OneEngRenamer",
             "manutencoes.json");
+
+        private JArray _dados = new JArray();
+
+        /// <summary>
+        /// Último conjunto de dados obtido.
+        /// </summary>
+        public JArray Dados => _dados;
 
         /// Caminho para o arquivo em cache contendo o JSON baixado.
         /// </summary>
@@ -52,10 +58,13 @@ namespace OrganizadorArquivosWPF.Services
         /// </summary>
         public async Task<JArray> ObterDadosAsync()
         {
+            string json = null;
+
 
             string json = null;
             // texto em XML baixado da web
             string xml = null;
+
 
             if (TemInternet())
             {
@@ -66,6 +75,7 @@ namespace OrganizadorArquivosWPF.Services
                         json = await http.GetStringAsync(ApiUrl);
                         Directory.CreateDirectory(Path.GetDirectoryName(OfflinePath));
                         File.WriteAllText(OfflinePath, json, Encoding.UTF8);
+
                         xml = await http.GetStringAsync(ApiUrl);
                         // valida e converte para JSON antes de salvar
                         var array = ConverterXmlParaArray(xml);
@@ -80,11 +90,15 @@ namespace OrganizadorArquivosWPF.Services
                 }
             }
 
+
+            if (json == null)
+
             if (json == null) {
                     xml = null; // falha na conexão ou XML inválido
             }
 
             if (xml == null)
+
             {
                 if (!File.Exists(OfflinePath))
                     return new JArray();
@@ -94,6 +108,15 @@ namespace OrganizadorArquivosWPF.Services
 
             try
             {
+                _dados = JArray.Parse(json);
+            }
+            catch
+            {
+                _dados = new JArray();
+            }
+
+            return _dados;
+
                 return JArray.Parse(json);
                 try
                 {
@@ -198,7 +221,6 @@ namespace OrganizadorArquivosWPF.Services
                 // retorna array vazio em caso de XML malformado
             }
             return arr;
-
         }
 
         private static bool TemInternet()
