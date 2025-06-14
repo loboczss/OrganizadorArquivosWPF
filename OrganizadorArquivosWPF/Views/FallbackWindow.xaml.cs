@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using OrganizadorArquivosWPF.Services;
+using OrganizadorArquivosWPF.Models;
 
 namespace OrganizadorArquivosWPF.Views
 {
@@ -24,12 +24,16 @@ namespace OrganizadorArquivosWPF.Views
         // Guarda a UF selecionada no MainWindow
         private readonly string _ufPrefixo;
 
-        public FallbackWindow(string osFull, IEnumerable<string> rotas, string uf)
+        // Conjunto de registros carregados em memória
+        private readonly IList<ClientRecord> _records;
+
+        public FallbackWindow(string osFull, IEnumerable<string> rotas, string uf, IEnumerable<ClientRecord> records)
         {
             InitializeComponent();
 
             OSFull = osFull;
             _ufPrefixo = uf.ToUpperInvariant();
+            _records = records?.ToList() ?? new List<ClientRecord>();
 
             TxtOSFull.Text = osFull;
 
@@ -65,11 +69,9 @@ namespace OrganizadorArquivosWPF.Views
         {
             try
             {
-                var service = new ExcelService();
-                var progress = new Progress<int>(_ => { }); // ignoramos progresso aqui
-
-                // Executa em background
-                var record = await Task.Run(() => service.GetRecordByIdSigfi(idSigfi, progress));
+                var record = await Task.Run(() =>
+                    _records.FirstOrDefault(r =>
+                        r.IdSigfi.Equals(idSigfi, StringComparison.OrdinalIgnoreCase)));
 
                 // Atualiza UI no thread principal
                 Dispatcher.Invoke(() =>
