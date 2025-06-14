@@ -41,7 +41,22 @@ namespace OrganizadorArquivosWPF.Services
         public ClientRecord GetRecord(string numOS, string ufIgnored, IProgress<int> progress = null)
         {
             if (!File.Exists(ExcelPath))
-                throw new FileNotFoundException("Planilha não encontrada em: " + ExcelPath);
+            {
+                // Planilha indisponível - tenta base em cache
+                var offline = new ManutencoesService();
+                var registros = offline.LoadCachedRecords();
+                int totalOff = registros.Count;
+                for (int i = 0; i < totalOff; i++)
+                {
+                    progress?.Report((int)((i + 1) * 100.0 / totalOff));
+                    var r = registros[i];
+                    if (r.NumOS.Equals(numOS, StringComparison.OrdinalIgnoreCase))
+                        return r;
+                }
+
+                progress?.Report(100);
+                return null;
+            }
 
             /* abre planilha */
             using (var ds = CreateDataSet())
@@ -104,7 +119,21 @@ namespace OrganizadorArquivosWPF.Services
         public ClientRecord GetRecordByIdSigfi(string idSigfi, IProgress<int> progress = null)
         {
             if (!File.Exists(ExcelPath))
-                throw new FileNotFoundException("Planilha não encontrada em: " + ExcelPath);
+            {
+                var offline = new ManutencoesService();
+                var registros = offline.LoadCachedRecords();
+                int totalOff = registros.Count;
+                for (int i = 0; i < totalOff; i++)
+                {
+                    progress?.Report((int)((i + 1) * 100.0 / totalOff));
+                    var r = registros[i];
+                    if (r.IdSigfi.Equals(idSigfi, StringComparison.OrdinalIgnoreCase))
+                        return r;
+                }
+
+                progress?.Report(100);
+                return null;
+            }
 
             using (var ds = CreateDataSet())
             {
