@@ -160,6 +160,8 @@ namespace OrganizadorArquivosWPF.Services
         {
             var arr = await ObterDadosAsync();
             return ParseClientRecords(arr);
+        }
+
         private static JArray ConverterXmlParaArray(string xml)
         {
             var arr = new JArray();
