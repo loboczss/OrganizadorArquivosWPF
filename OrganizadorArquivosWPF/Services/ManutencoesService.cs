@@ -21,6 +21,26 @@ namespace OrganizadorArquivosWPF.Services
             "manutencoes.json");
 
         /// <summary>
+        /// Caminho para o arquivo em cache contendo o JSON baixado.
+        /// </summary>
+        public static string CacheFilePath => OfflinePath;
+
+        /// <summary>
+        /// Retorna a data de escrita do arquivo de cache ou null se inexistente.
+        /// </summary>
+        public static DateTime? GetCacheTimestamp()
+        {
+            try
+            {
+                return File.Exists(OfflinePath) ? File.GetLastWriteTime(OfflinePath) : (DateTime?)null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Retorna os dados de manutenção. Se houver internet, atualiza o arquivo offline.
         /// </summary>
         public async Task<JArray> ObterDadosAsync()
