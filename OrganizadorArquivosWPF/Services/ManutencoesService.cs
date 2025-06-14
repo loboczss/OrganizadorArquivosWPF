@@ -4,6 +4,9 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+
+using Newtonsoft.Json.Linq;
+
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
@@ -25,7 +28,6 @@ namespace OrganizadorArquivosWPF.Services
             "OneEngRenamer",
             "manutencoes.json");
 
-        /// <summary>
         /// Caminho para o arquivo em cache contendo o JSON baixado.
         /// </summary>
         public static string CacheFilePath => OfflinePath;
@@ -50,6 +52,8 @@ namespace OrganizadorArquivosWPF.Services
         /// </summary>
         public async Task<JArray> ObterDadosAsync()
         {
+
+            string json = null;
             // texto em XML baixado da web
             string xml = null;
 
@@ -59,6 +63,9 @@ namespace OrganizadorArquivosWPF.Services
                 {
                     using (var http = new HttpClient())
                     {
+                        json = await http.GetStringAsync(ApiUrl);
+                        Directory.CreateDirectory(Path.GetDirectoryName(OfflinePath));
+                        File.WriteAllText(OfflinePath, json, Encoding.UTF8);
                         xml = await http.GetStringAsync(ApiUrl);
                         // valida e converte para JSON antes de salvar
                         var array = ConverterXmlParaArray(xml);
@@ -69,8 +76,12 @@ namespace OrganizadorArquivosWPF.Services
                 }
                 catch
                 {
-                    xml = null; // falha na conexão ou XML inválido
+                    json = null; // falha na conexão, tenta local
                 }
+            }
+
+            if (json == null) {
+                    xml = null; // falha na conexão ou XML inválido
             }
 
             if (xml == null)
@@ -78,6 +89,12 @@ namespace OrganizadorArquivosWPF.Services
                 if (!File.Exists(OfflinePath))
                     return new JArray();
 
+                json = File.ReadAllText(OfflinePath, Encoding.UTF8);
+            }
+
+            try
+            {
+                return JArray.Parse(json);
                 try
                 {
                     var offlineJson = File.ReadAllText(OfflinePath, Encoding.UTF8);

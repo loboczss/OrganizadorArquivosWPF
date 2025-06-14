@@ -121,7 +121,8 @@ namespace OrganizadorArquivosWPF
             // 3) Atualiza data da base de dados
             await AtualizarDataPlanilhaAsync();
 
-            // 4) Dados de manutenção já carregados em _cachedRecords
+            // 4) Baixa dados de manutenção se possível
+            try { await _manutencoes.ObterDadosAsync(); } catch { }
         }
 
         #region Botão Processar
