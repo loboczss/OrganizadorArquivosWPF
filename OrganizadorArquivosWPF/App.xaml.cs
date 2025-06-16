@@ -23,16 +23,16 @@ namespace OrganizadorArquivosWPF
             splash.WindowStartupLocation = WindowStartupLocation.CenterScreen;
             splash.Show();
 
-            // Dispara sincronização em background: não bloqueia a thread de UI
-            var syncTask = Task.Run(() => SyncVerifierService.VerificarOuSincronizarArquivo());
+            // Dispara sincronização e download de dados em background
+            _ = Task.Run(() => SyncVerifierService.VerificarOuSincronizarArquivo());
+            _ = Task.Run(async () =>
+            {
+                var manutencao = new ManutencoesService();
+                try { await manutencao.ObterDadosAsync(); } catch { }
+            });
 
-            // Se quiser aguardar a sincronização COMPLETA antes de prosseguir,
-            // descomente a linha abaixo. Caso contrário, já dá pra liberar o login.
-            // await syncTask;
-
-            // Fecha splash após algum tempo ou imediatamente:
-            // - Se você fez await, ele espera terminar; 
-            // - Se não fez await, você pode fechar aqui ou aguardar a Task opcionalmente:
+            // Aguarda breve momento apenas para mostrar o splash
+            await Task.Delay(500);
             splash.Close();
             // ------------------------------------------------------
 
