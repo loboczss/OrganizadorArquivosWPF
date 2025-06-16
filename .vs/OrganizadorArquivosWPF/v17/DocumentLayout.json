@@ -11,7 +11,7 @@
       "RelativeMoniker": "D:0:0:{486E8737-93A9-40CE-8053-3B71AC68AE50}|OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj|solutionrelative:organizadorarquivoswpf\\views\\updatepromptwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{486E8737-93A9-40CE-8053-3B71AC68AE50}|OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj|d:\\dev\\organizadorarquivoswpf\\organizadorarquivoswpf\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{486E8737-93A9-40CE-8053-3B71AC68AE50}|OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj|D:\\Dev\\OrganizadorArquivosWPF\\organizadorarquivoswpf\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{486E8737-93A9-40CE-8053-3B71AC68AE50}|OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj|solutionrelative:organizadorarquivoswpf\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
@@ -125,7 +125,7 @@
               "RelativeDocumentMoniker": "OrganizadorArquivosWPF\\Services\\ManutencoesService.cs",
               "ToolTip": "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\Services\\ManutencoesService.cs",
               "RelativeToolTip": "OrganizadorArquivosWPF\\Services\\ManutencoesService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAnAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABgAAAA4AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-06-14T17:14:09.647Z",
               "EditorCaption": ""
@@ -163,8 +163,7 @@
               "RelativeToolTip": "OrganizadorArquivosWPF\\Views\\UpdatePromptWindow.xaml.cs",
               "ViewState": "AgIAAAUAAAAAAAAAAAAswDIAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-05-21T21:31:07.515Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-21T21:31:07.515Z"
             },
             {
               "$type": "Document",
@@ -315,8 +314,7 @@
               "RelativeToolTip": "OrganizadorArquivosWPF\\MainWindow.xaml.cs",
               "ViewState": "AgIAABsAAAAAAAAAAAAAAAsAAAASAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-05-14T14:18:14.676Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-14T14:18:14.676Z"
             },
             {
               "$type": "Document",
