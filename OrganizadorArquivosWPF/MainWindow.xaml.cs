@@ -491,10 +491,7 @@ namespace OrganizadorArquivosWPF
                 else
                     _log.Warning($"Falha ao atualizar dados de manutenção - usando cache ({time:HH:mm:ss})");
             });
-
             _ = AtualizarDataPlanilhaAsync();
-            _manutencoes?.StopAutoUpdate();
-
         }
         #endregion
     }
