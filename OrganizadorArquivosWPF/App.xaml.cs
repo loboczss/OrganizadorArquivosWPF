@@ -31,6 +31,7 @@ namespace OrganizadorArquivosWPF
                 try { await manutencao.ObterDadosAsync(); } catch { }
             });
 
+
             // Aguarda breve momento apenas para mostrar o splash
             await Task.Delay(500);
             // Dispara sincronização e download de dados durante o splash

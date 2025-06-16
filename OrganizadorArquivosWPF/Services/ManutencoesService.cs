@@ -28,6 +28,8 @@ namespace OrganizadorArquivosWPF.Services
 
         private JArray _dados = new JArray();
         private Timer _timer;
+        private IProgress<int> _timerProgress;
+
 
         /// <summary>
         /// Disparado ao concluir a obtenção de dados. O bool indica se
@@ -62,8 +64,9 @@ namespace OrganizadorArquivosWPF.Services
         /// <summary>
         /// Retorna os dados de manutenção. Se houver internet, atualiza o arquivo offline.
         /// </summary>
-        public async Task<JArray> ObterDadosAsync()
+        public async Task<JArray> ObterDadosAsync(IProgress<int> progress = null)
         {
+            progress?.Report(0);
             string xml = null;
             string json = null;
             bool fromInternet = false;
@@ -73,8 +76,28 @@ namespace OrganizadorArquivosWPF.Services
                 try
                 {
                     using (var http = new HttpClient())
+                    using (var response = await http.GetAsync(ApiUrl, HttpCompletionOption.ResponseHeadersRead))
                     {
-                        xml = await http.GetStringAsync(ApiUrl);
+                        response.EnsureSuccessStatusCode();
+
+                        var total = response.Content.Headers.ContentLength ?? -1L;
+                        using (var stream = await response.Content.ReadAsStreamAsync())
+                        using (var ms = new MemoryStream())
+                        {
+                            var buffer = new byte[8192];
+                            long readTotal = 0;
+                            int read;
+                            while ((read = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                            {
+                                ms.Write(buffer, 0, read);
+                                readTotal += read;
+                                if (total > 0)
+                                    progress?.Report((int)(readTotal * 100 / total));
+                            }
+
+                            xml = Encoding.UTF8.GetString(ms.ToArray());
+                        }
+
                         var array = ConverterXmlParaArray(xml);
                         json = array.ToString();
 
@@ -83,6 +106,7 @@ namespace OrganizadorArquivosWPF.Services
 
                         _dados = array;
                         fromInternet = true;
+                        progress?.Report(100);
                     }
                 }
                 catch
@@ -104,10 +128,12 @@ namespace OrganizadorArquivosWPF.Services
                     {
                         _dados = new JArray();
                     }
+                    progress?.Report(100);
                 }
                 catch
                 {
                     _dados = new JArray();
+                    progress?.Report(100);
                 }
             }
 
@@ -171,9 +197,9 @@ namespace OrganizadorArquivosWPF.Services
         /// <summary>
         /// Obtém os dados de manutenção e converte para registros de cliente.
         /// </summary>
-        public async Task<List<ClientRecord>> ObterClientRecordsAsync()
+        public async Task<List<ClientRecord>> ObterClientRecordsAsync(IProgress<int> progress = null)
         {
-            var arr = await ObterDadosAsync();
+            var arr = await ObterDadosAsync(progress);
             return ParseClientRecords(arr);
         }
 
@@ -215,10 +241,12 @@ namespace OrganizadorArquivosWPF.Services
         /// <summary>
         /// Inicia a atualização automática dos dados em intervalo fixo.
         /// </summary>
-        public void StartAutoUpdate(TimeSpan interval)
+        public void StartAutoUpdate(TimeSpan interval, IProgress<int> progress = null)
         {
             if (_timer != null)
                 return;
+
+            _timerProgress = progress;
 
             _timer = new Timer(interval.TotalMilliseconds)
             {
@@ -228,7 +256,7 @@ namespace OrganizadorArquivosWPF.Services
             _timer.Elapsed += async (s, e) =>
             {
                 _timer.Enabled = false;
-                try { await ObterDadosAsync(); }
+                try { await ObterDadosAsync(_timerProgress); }
                 catch { /* ignorar erros de download */ }
                 finally { _timer.Enabled = true; }
             };
@@ -244,6 +272,7 @@ namespace OrganizadorArquivosWPF.Services
                 _timer.Stop();
                 _timer.Dispose();
                 _timer = null;
+                _timerProgress = null;
             }
         }
     }
