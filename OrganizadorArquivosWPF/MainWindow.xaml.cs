@@ -164,7 +164,7 @@ namespace OrganizadorArquivosWPF
             {
                 _manutencoes.UpdateCompleted += Manutencoes_UpdateCompleted;
                 await _manutencoes.ObterDadosAsync(_downloadReporter);
-                _manutencoes.StartAutoUpdate(TimeSpan.FromMinutes(1), _downloadReporter);
+                _manutencoes.StartAutoUpdate(TimeSpan.FromMinutes(5), _downloadReporter);
             }
             catch (Exception ex)
             {
