@@ -33,6 +33,19 @@ namespace OrganizadorArquivosWPF
 
             // Aguarda breve momento apenas para mostrar o splash
             await Task.Delay(500);
+            // Dispara sincronização e download de dados durante o splash
+            var syncTask = Task.Run(() => SyncVerifierService.VerificarOuSincronizarArquivo());
+            try
+            {
+                var manutencao = new ManutencoesService();
+                await manutencao.ObterDadosAsync();
+            }
+            catch
+            {
+                // Ignora falhas de download no splash
+            }
+
+            // Fecha splash após completar o download
             splash.Close();
             // ------------------------------------------------------
 

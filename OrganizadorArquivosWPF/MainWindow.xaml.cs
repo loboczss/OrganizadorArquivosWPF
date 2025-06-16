@@ -129,6 +129,7 @@ namespace OrganizadorArquivosWPF
                 _manutencoes.UpdateCompleted += Manutencoes_UpdateCompleted;
                 await _manutencoes.ObterDadosAsync();
                 _manutencoes.StartAutoUpdate(TimeSpan.FromMinutes(1));
+
             }
             catch (Exception ex)
             {
@@ -459,6 +460,8 @@ namespace OrganizadorArquivosWPF
             });
 
             _ = AtualizarDataPlanilhaAsync();
+            _manutencoes?.StopAutoUpdate();
+
         }
         #endregion
     }
