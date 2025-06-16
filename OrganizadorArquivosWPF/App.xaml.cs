@@ -3,17 +3,21 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
-using OrganizadorArquivosWPF.Models;
+using Microsoft.Win32;
 using OrganizadorArquivosWPF.Services;
+using OrganizadorArquivosWPF.Models;
 using OrganizadorArquivosWPF.Views;
 
 namespace OrganizadorArquivosWPF
 {
     public partial class App : Application
     {
+        private TrayService _tray;
         protected async override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            EnsureRunAtStartup();
 
             // ------------------------------------------------------
             // (Opcional) 0) Abre splash e executa sincronização
@@ -49,6 +53,9 @@ namespace OrganizadorArquivosWPF
 
             // Fecha splash após completar o download
             splash.Close();
+
+            _tray = new TrayService();
+            _tray.Start(null);
             // ------------------------------------------------------
 
             // ------------------------------------------------------
@@ -81,7 +88,6 @@ namespace OrganizadorArquivosWPF
             // 3) Se não atualizou, continua para a MainWindow
             // ------------------------------------------------------
             var main = new MainWindow(user);
-            main.Closed += (_, __) => Shutdown();
             Current.MainWindow = main;
             main.Show();
 
@@ -114,6 +120,24 @@ namespace OrganizadorArquivosWPF
                 UseShellExecute = true,
                 WorkingDirectory = Path.GetDirectoryName(batPath)
             });
+        }
+
+        private void EnsureRunAtStartup()
+        {
+            try
+            {
+                var runKey = Registry.CurrentUser.OpenSubKey(
+                    "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
+                var exe = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                runKey?.SetValue("OrganizadorArquivosWPF", '"' + exe + '"');
+            }
+            catch { /* ignore registry errors */ }
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            _tray?.Dispose();
+            base.OnExit(e);
         }
     }
 }
