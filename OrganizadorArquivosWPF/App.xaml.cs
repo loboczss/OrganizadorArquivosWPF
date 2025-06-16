@@ -58,8 +58,22 @@ namespace OrganizadorArquivosWPF
             _tray.Start(null);
             // ------------------------------------------------------
 
+
+
             // ------------------------------------------------------
-            // 1) Exibe Login
+            // 1) Prompt de atualização antes de abrir o main
+            // ------------------------------------------------------
+            var updatePrompt = new UpdatePromptWindow();
+            bool? wantsUpdate = updatePrompt.ShowDialog();
+            if (wantsUpdate == true && updatePrompt.ShouldUpdate)
+            {
+                RunUpdaterBat();
+                Shutdown();
+                return;
+            }
+
+            // ------------------------------------------------------
+            // 2) Exibe Login
             // ------------------------------------------------------
             var login = new LoginWindow();
             bool? loginOk = login.ShowDialog();
@@ -71,18 +85,6 @@ namespace OrganizadorArquivosWPF
             }
 
             UsuarioRecord user = login.Usuario;
-
-            // ------------------------------------------------------
-            // 2) Prompt de atualização antes de abrir o main
-            // ------------------------------------------------------
-            var updatePrompt = new UpdatePromptWindow();
-            bool? wantsUpdate = updatePrompt.ShowDialog();
-            if (wantsUpdate == true && updatePrompt.ShouldUpdate)
-            {
-                RunUpdaterBat();
-                Shutdown();
-                return;
-            }
 
             // ------------------------------------------------------
             // 3) Se não atualizou, continua para a MainWindow
