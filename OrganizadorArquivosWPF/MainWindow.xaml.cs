@@ -262,6 +262,9 @@ namespace OrganizadorArquivosWPF
                     reporter);
 
                 BtnAbrir.Visibility = Visibility.Visible;
+
+                // Limpa o log visual após concluir a operação com sucesso
+                _log.Clear();
             }
             catch (Exception ex)
             {
