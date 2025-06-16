@@ -126,8 +126,10 @@ namespace OrganizadorArquivosWPF
             // 4) Baixa dados de manutenção se possível
             try
             {
+                _manutencoes.UpdateCompleted += Manutencoes_UpdateCompleted;
                 await _manutencoes.ObterDadosAsync();
-                _manutencoes.StartAutoUpdate(TimeSpan.FromSeconds(30));
+                _manutencoes.StartAutoUpdate(TimeSpan.FromMinutes(1));
+
             }
             catch (Exception ex)
             {
@@ -440,7 +442,26 @@ namespace OrganizadorArquivosWPF
 
         private void MainWindow_Closed(object sender, EventArgs e)
         {
+            if (_manutencoes != null)
+            {
+                _manutencoes.UpdateCompleted -= Manutencoes_UpdateCompleted;
+                _manutencoes.StopAutoUpdate();
+            }
+        }
+
+        private void Manutencoes_UpdateCompleted(DateTime time, bool fromInternet)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (fromInternet)
+                    _log.Info($"Dados de manutenção atualizados em {time:HH:mm:ss}");
+                else
+                    _log.Warning($"Falha ao atualizar dados de manutenção - usando cache ({time:HH:mm:ss})");
+            });
+
+            _ = AtualizarDataPlanilhaAsync();
             _manutencoes?.StopAutoUpdate();
+
         }
         #endregion
     }

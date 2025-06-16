@@ -30,6 +30,12 @@ namespace OrganizadorArquivosWPF.Services
         private Timer _timer;
 
         /// <summary>
+        /// Disparado ao concluir a obtenção de dados. O bool indica se
+        /// os dados vieram da internet (true) ou do cache offline (false).
+        /// </summary>
+        public event Action<DateTime, bool> UpdateCompleted;
+
+        /// <summary>
         /// Último conjunto de dados obtido.
         /// </summary>
         public JArray Dados => _dados;
@@ -60,6 +66,7 @@ namespace OrganizadorArquivosWPF.Services
         {
             string xml = null;
             string json = null;
+            bool fromInternet = false;
 
             if (TemInternet())
             {
@@ -75,7 +82,7 @@ namespace OrganizadorArquivosWPF.Services
                         File.WriteAllText(OfflinePath, json, Encoding.UTF8);
 
                         _dados = array;
-                        return _dados;
+                        fromInternet = true;
                     }
                 }
                 catch
@@ -84,23 +91,27 @@ namespace OrganizadorArquivosWPF.Services
                 }
             }
 
-            try
+            if (!fromInternet)
             {
-                if (File.Exists(OfflinePath))
+                try
                 {
-                    json = File.ReadAllText(OfflinePath, Encoding.UTF8);
-                    _dados = JArray.Parse(json);
+                    if (File.Exists(OfflinePath))
+                    {
+                        json = File.ReadAllText(OfflinePath, Encoding.UTF8);
+                        _dados = JArray.Parse(json);
+                    }
+                    else
+                    {
+                        _dados = new JArray();
+                    }
                 }
-                else
+                catch
                 {
                     _dados = new JArray();
                 }
             }
-            catch
-            {
-                _dados = new JArray();
-            }
 
+            UpdateCompleted?.Invoke(DateTime.Now, fromInternet);
             return _dados;
         }
 

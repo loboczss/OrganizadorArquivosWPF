@@ -23,6 +23,16 @@ namespace OrganizadorArquivosWPF
             splash.WindowStartupLocation = WindowStartupLocation.CenterScreen;
             splash.Show();
 
+            // Dispara sincronização e download de dados em background
+            _ = Task.Run(() => SyncVerifierService.VerificarOuSincronizarArquivo());
+            _ = Task.Run(async () =>
+            {
+                var manutencao = new ManutencoesService();
+                try { await manutencao.ObterDadosAsync(); } catch { }
+            });
+
+            // Aguarda breve momento apenas para mostrar o splash
+            await Task.Delay(500);
             // Dispara sincronização e download de dados durante o splash
             var syncTask = Task.Run(() => SyncVerifierService.VerificarOuSincronizarArquivo());
             try
