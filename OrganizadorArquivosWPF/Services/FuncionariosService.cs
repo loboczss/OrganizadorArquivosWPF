@@ -14,10 +14,9 @@ namespace OrganizadorArquivosWPF.Services
     public class FuncionariosService
     {
         private readonly string _csvPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            "ONE ENGENHARIA INDUSTRIA E COMERCIO LTDA",
-            "ONE Engenharia - Power BI",
-            "funcionarios.csv");
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "OneEngRenamer","OrganizadorArquivosWPF","funcionarios.csv");
+
 
         /// <summary>
         /// Força o arquivo a ser disponibilizado localmente (online) caso esteja somente na nuvem.

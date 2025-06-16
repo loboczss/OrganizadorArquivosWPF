@@ -265,6 +265,7 @@ namespace OrganizadorArquivosWPF
 
                 // Limpa o log visual após concluir a operação com sucesso
                 _log.Clear();
+                _log.Info($"Pasta selecionada: {_pastaOrigem}");
             }
             catch (Exception ex)
             {
