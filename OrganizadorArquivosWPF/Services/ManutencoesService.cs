@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using OrganizadorArquivosWPF.Models;
 using System.Xml.Linq;
+using System.Timers;
 
 
 namespace OrganizadorArquivosWPF.Services
@@ -26,6 +27,7 @@ namespace OrganizadorArquivosWPF.Services
             "manutencoes.json");
 
         private JArray _dados = new JArray();
+        private Timer _timer;
 
         /// <summary>
         /// Último conjunto de dados obtido.
@@ -196,6 +198,41 @@ namespace OrganizadorArquivosWPF.Services
             catch
             {
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Inicia a atualização automática dos dados em intervalo fixo.
+        /// </summary>
+        public void StartAutoUpdate(TimeSpan interval)
+        {
+            if (_timer != null)
+                return;
+
+            _timer = new Timer(interval.TotalMilliseconds)
+            {
+                AutoReset = true,
+                Enabled = true
+            };
+            _timer.Elapsed += async (s, e) =>
+            {
+                _timer.Enabled = false;
+                try { await ObterDadosAsync(); }
+                catch { /* ignorar erros de download */ }
+                finally { _timer.Enabled = true; }
+            };
+        }
+
+        /// <summary>
+        /// Para a atualização automática.
+        /// </summary>
+        public void StopAutoUpdate()
+        {
+            if (_timer != null)
+            {
+                _timer.Stop();
+                _timer.Dispose();
+                _timer = null;
             }
         }
     }
