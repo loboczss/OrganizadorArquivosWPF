@@ -22,13 +22,14 @@ namespace OrganizadorArquivosWPF
             splash.Owner = null;       // para não ficar “presa” a outra janela
             splash.WindowStartupLocation = WindowStartupLocation.CenterScreen;
             splash.Show();
+            var progress = new Progress<int>(p => splash.SetProgress(p));
 
             // Dispara sincronização e download de dados em background
             _ = Task.Run(() => SyncVerifierService.VerificarOuSincronizarArquivo());
             _ = Task.Run(async () =>
             {
                 var manutencao = new ManutencoesService();
-                try { await manutencao.ObterDadosAsync(); } catch { }
+                try { await manutencao.ObterDadosAsync(progress); } catch { }
             });
 
 
@@ -39,7 +40,7 @@ namespace OrganizadorArquivosWPF
             try
             {
                 var manutencao = new ManutencoesService();
-                await manutencao.ObterDadosAsync();
+                await manutencao.ObterDadosAsync(progress);
             }
             catch
             {

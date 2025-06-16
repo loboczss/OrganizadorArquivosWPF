@@ -70,6 +70,7 @@ namespace OrganizadorArquivosWPF
         private List<ClientRecord> _cachedRecords;
         private readonly ObservableCollection<LogEntry> _logs;
         private readonly DownloadProgress _downloadReporter;
+        private LogEntry _lastUpdateEntry;
         private string _pastaOrigem;
         #endregion
 
@@ -486,10 +487,15 @@ namespace OrganizadorArquivosWPF
         {
             Dispatcher.Invoke(() =>
             {
+                if (_lastUpdateEntry != null)
+                    _logs.Remove(_lastUpdateEntry);
+
                 if (fromInternet)
                     _log.Info($"Dados de manutenção atualizados em {time:HH:mm:ss}");
                 else
                     _log.Warning($"Falha ao atualizar dados de manutenção - usando cache ({time:HH:mm:ss})");
+
+                _lastUpdateEntry = _logs.LastOrDefault();
             });
             _ = AtualizarDataPlanilhaAsync();
         }
