@@ -36,6 +36,29 @@ namespace OrganizadorArquivosWPF
             public void Report(int value)
                 => _wnd.Dispatcher.Invoke(() => _wnd.Progress.Value = value);
         }
+
+        private sealed class DownloadProgress : IProgress<int>
+        {
+            private readonly MainWindow _wnd;
+            public DownloadProgress(MainWindow wnd) => _wnd = wnd;
+            public void Report(int value)
+            {
+                _wnd.Dispatcher.Invoke(() =>
+                {
+                    if (value >= 100)
+                    {
+                        _wnd.DownloadBar.Value = 100;
+                        _wnd.DownloadBar.Visibility = Visibility.Collapsed;
+                    }
+                    else
+                    {
+                        if (_wnd.DownloadBar.Visibility != Visibility.Visible)
+                            _wnd.DownloadBar.Visibility = Visibility.Visible;
+                        _wnd.DownloadBar.Value = value;
+                    }
+                });
+            }
+        }
         #endregion
 
         #region Campos e serviços (mais “leves”)
@@ -46,6 +69,7 @@ namespace OrganizadorArquivosWPF
         private ManutencoesService _manutencoes;
         private List<ClientRecord> _cachedRecords;
         private readonly ObservableCollection<LogEntry> _logs;
+        private readonly DownloadProgress _downloadReporter;
         private string _pastaOrigem;
         #endregion
 
@@ -61,6 +85,7 @@ namespace OrganizadorArquivosWPF
             // Inicializa coleção de logs e serviço de log visual
             _logs = new ObservableCollection<LogEntry>();
             _log = new LoggerService(_logs, Dispatcher);
+            _downloadReporter = new DownloadProgress(this);
 
             // Ainda não instanciamos ExcelService, RenamerService, etc., para não travar
             // Essas instâncias serão criadas em background em 'Window_Loaded'.
@@ -79,8 +104,9 @@ namespace OrganizadorArquivosWPF
                     GridLog.ScrollIntoView(GridLog.Items[GridLog.Items.Count - 1]);
             };
 
-            // Barra de progresso começa escondida
+            // Barras de progresso começam escondidas
             ConfigurarProgressBar();
+            ConfigurarDownloadBar();
 
             // Exibe texto-padrão nas labels que serão preenchidas
             TxtSyncStatus.Text = "Verificando dados de manutenção...";
@@ -94,6 +120,7 @@ namespace OrganizadorArquivosWPF
 
             // Assina evento Loaded para disparar o que é pesado em background
             Loaded += MainWindow_Loaded;
+            Closed += MainWindow_Closed;
         }
 
         /// <summary>
@@ -114,7 +141,7 @@ namespace OrganizadorArquivosWPF
             });
 
             // Carrega registros em memória (pode demorar um pouco)
-            _cachedRecords = await _manutencoes.ObterClientRecordsAsync();
+            _cachedRecords = await _manutencoes.ObterClientRecordsAsync(_downloadReporter);
 
             // 2) Atualiza status de sincronização
             await AtualizarStatusSincronizacaoAsync();
@@ -125,7 +152,9 @@ namespace OrganizadorArquivosWPF
             // 4) Baixa dados de manutenção se possível
             try
             {
-                await _manutencoes.ObterDadosAsync();
+                _manutencoes.UpdateCompleted += Manutencoes_UpdateCompleted;
+                await _manutencoes.ObterDadosAsync(_downloadReporter);
+                _manutencoes.StartAutoUpdate(TimeSpan.FromMinutes(1), _downloadReporter);
             }
             catch (Exception ex)
             {
@@ -323,6 +352,14 @@ namespace OrganizadorArquivosWPF
             Progress.Visibility = Visibility.Collapsed;
         }
 
+        private void ConfigurarDownloadBar()
+        {
+            DownloadBar.Minimum = 0;
+            DownloadBar.Maximum = 100;
+            DownloadBar.IsIndeterminate = false;
+            DownloadBar.Visibility = Visibility.Collapsed;
+        }
+
         /// <summary>
         /// Atualiza o status de sincronização (I/O leve: File.Exists ou rede).
         /// </summary>
@@ -434,6 +471,28 @@ namespace OrganizadorArquivosWPF
         {
             if (_renamer != null && Directory.Exists(_renamer.LastDestination))
                 Process.Start("explorer.exe", _renamer.LastDestination);
+        }
+
+        private void MainWindow_Closed(object sender, EventArgs e)
+        {
+            if (_manutencoes != null)
+            {
+                _manutencoes.UpdateCompleted -= Manutencoes_UpdateCompleted;
+                _manutencoes.StopAutoUpdate();
+            }
+        }
+
+        private void Manutencoes_UpdateCompleted(DateTime time, bool fromInternet)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (fromInternet)
+                    _log.Info($"Dados de manutenção atualizados em {time:HH:mm:ss}");
+                else
+                    _log.Warning($"Falha ao atualizar dados de manutenção - usando cache ({time:HH:mm:ss})");
+            });
+
+            _ = AtualizarDataPlanilhaAsync();
         }
         #endregion
     }
