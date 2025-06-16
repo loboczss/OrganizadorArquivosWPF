@@ -134,5 +134,13 @@ namespace OrganizadorArquivosWPF.Services
                 }
             }
         }
+
+        /// <summary>
+        /// Limpa todas as entradas de log mantidas em memória e exibidas na UI.
+        /// </summary>
+        public void Clear()
+        {
+            _dispatcher.Invoke(() => _logs.Clear());
+        }
     }
 }
