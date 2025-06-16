@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Win32;
@@ -12,9 +13,21 @@ namespace OrganizadorArquivosWPF
 {
     public partial class App : Application
     {
+        private const string MutexName = "OrganizadorArquivosWPF_SingleInstance";
+        private Mutex _mutex;
         private TrayService _tray;
+
         protected async override void OnStartup(StartupEventArgs e)
         {
+            bool created;
+            _mutex = new Mutex(true, MutexName, out created);
+            if (!created)
+            {
+                ActivatePreviousInstance();
+                Shutdown();
+                return;
+            }
+
             base.OnStartup(e);
 
             EnsureRunAtStartup();
@@ -138,8 +151,28 @@ namespace OrganizadorArquivosWPF
 
         protected override void OnExit(ExitEventArgs e)
         {
+            _mutex?.ReleaseMutex();
+            _mutex?.Dispose();
             _tray?.Dispose();
             base.OnExit(e);
+        }
+
+        private static void ActivatePreviousInstance()
+        {
+            var current = Process.GetCurrentProcess();
+            foreach (var process in Process.GetProcessesByName(current.ProcessName))
+            {
+                if (process.Id == current.Id)
+                    continue;
+
+                var handle = process.MainWindowHandle;
+                if (handle != IntPtr.Zero)
+                {
+                    Utils.WindowHelper.ShowWindow(handle, Utils.WindowHelper.SW_RESTORE);
+                    Utils.WindowHelper.SetForegroundWindow(handle);
+                }
+                break;
+            }
         }
     }
 }
