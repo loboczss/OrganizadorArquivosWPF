@@ -30,6 +30,7 @@ namespace OrganizadorArquivosWPF.Services
         private Timer _timer;
         private IProgress<int> _timerProgress;
 
+
         /// <summary>
         /// Disparado ao concluir a obtenção de dados. O bool indica se
         /// os dados vieram da internet (true) ou do cache offline (false).

@@ -493,6 +493,8 @@ namespace OrganizadorArquivosWPF
             });
 
             _ = AtualizarDataPlanilhaAsync();
+            _manutencoes?.StopAutoUpdate();
+
         }
         #endregion
     }
