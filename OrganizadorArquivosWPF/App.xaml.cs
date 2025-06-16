@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Interop;
 using Microsoft.Win32;
 using OrganizadorArquivosWPF.Services;
 using OrganizadorArquivosWPF.Models;
@@ -14,19 +15,25 @@ namespace OrganizadorArquivosWPF
     public partial class App : Application
     {
         private const string MutexName = "OrganizadorArquivosWPF_SingleInstance";
+        private const string ShowEventName = "OrganizadorArquivosWPF_ShowMain";
         private Mutex _mutex;
+        private EventWaitHandle _showEvent;
         private TrayService _tray;
 
         protected async override void OnStartup(StartupEventArgs e)
         {
             bool created;
             _mutex = new Mutex(true, MutexName, out created);
+            _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
             if (!created)
             {
+                _showEvent.Set();
                 ActivatePreviousInstance();
                 Shutdown();
                 return;
             }
+
+            StartShowEventListener();
 
             base.OnStartup(e);
 
@@ -154,7 +161,33 @@ namespace OrganizadorArquivosWPF
             _mutex?.ReleaseMutex();
             _mutex?.Dispose();
             _tray?.Dispose();
+            _showEvent?.Dispose();
             base.OnExit(e);
+        }
+
+        private void StartShowEventListener()
+        {
+            Task.Run(() =>
+            {
+                while (true)
+                {
+                    _showEvent.WaitOne();
+                    Dispatcher.Invoke(() =>
+                    {
+                        var main = Current.MainWindow;
+                        if (main != null)
+                        {
+                            main.Show();
+                            var handle = new WindowInteropHelper(main).Handle;
+                            if (handle != IntPtr.Zero)
+                            {
+                                Utils.WindowHelper.ShowWindow(handle, Utils.WindowHelper.SW_RESTORE);
+                                Utils.WindowHelper.SetForegroundWindow(handle);
+                            }
+                        }
+                    });
+                }
+            });
         }
 
         private static void ActivatePreviousInstance()
