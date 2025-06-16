@@ -386,7 +386,7 @@ namespace OrganizadorArquivosWPF
         }
 
         /// <summary>
-        /// Atualiza a data da base de dados consultando via ExcelService (pesado).
+        /// Atualiza a data da base de dados consultando via link (pesado).
         /// </summary>
         private async Task AtualizarDataPlanilhaAsync()
         {
@@ -406,13 +406,12 @@ namespace OrganizadorArquivosWPF
                 {
                     TxtLastUpdate.Text = $"Última atualização: {cacheTime.Value:dd/MM/yyyy HH:mm}";
                     TxtLastUpdate.Foreground = Brushes.Black;
-                    _log.Info($"Última atualização do cache: {cacheTime.Value}");
                 }
                 else
                 {
                     TxtLastUpdate.Text = "Última atualização: --";
                     TxtLastUpdate.Foreground = Brushes.Red;
-                    _log.Warning("Cache de manutenção não encontrado");
+                    _log.Critical("Cache de manutenção não encontrado");
                 }
             });
         }
