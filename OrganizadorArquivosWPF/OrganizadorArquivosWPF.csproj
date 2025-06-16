@@ -214,6 +214,7 @@
     <Compile Include="Services\RenamerService.cs" />
     <Compile Include="Services\SyncVerifierService.cs" />
     <Compile Include="Services\ManutencoesService.cs" />
+    <Compile Include="Services\TrayService.cs" />
     <Compile Include="Views\FallbackWindow.xaml.cs">
       <DependentUpon>FallbackWindow.xaml</DependentUpon>
     </Compile>

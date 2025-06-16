@@ -130,6 +130,7 @@ namespace OrganizadorArquivosWPF
 
             // Assina evento Loaded para disparar o que é pesado em background
             Loaded += MainWindow_Loaded;
+            Closing += MainWindow_Closing;
             Closed += MainWindow_Closed;
         }
 
@@ -164,7 +165,7 @@ namespace OrganizadorArquivosWPF
             {
                 _manutencoes.UpdateCompleted += Manutencoes_UpdateCompleted;
                 await _manutencoes.ObterDadosAsync(_downloadReporter);
-                _manutencoes.StartAutoUpdate(TimeSpan.FromMinutes(1), _downloadReporter);
+                _manutencoes.StartAutoUpdate(TimeSpan.FromMinutes(5), _downloadReporter);
             }
             catch (Exception ex)
             {
@@ -480,6 +481,12 @@ namespace OrganizadorArquivosWPF
         {
             if (_renamer != null && Directory.Exists(_renamer.LastDestination))
                 Process.Start("explorer.exe", _renamer.LastDestination);
+        }
+
+        private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            e.Cancel = true;
+            Hide();
         }
 
         private void MainWindow_Closed(object sender, EventArgs e)
