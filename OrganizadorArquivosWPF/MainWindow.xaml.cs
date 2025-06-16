@@ -49,11 +49,20 @@ namespace OrganizadorArquivosWPF
                     {
                         _wnd.DownloadBar.Value = 100;
                         _wnd.DownloadBar.Visibility = Visibility.Collapsed;
+                        _wnd.DownloadBar.IsIndeterminate = false;
+                    }
+                    else if (value < 0)
+                    {
+                        if (_wnd.DownloadBar.Visibility != Visibility.Visible)
+                            _wnd.DownloadBar.Visibility = Visibility.Visible;
+                        _wnd.DownloadBar.IsIndeterminate = true;
+                        _wnd.TxtSyncStatus.Text = "Baixando dados...";
                     }
                     else
                     {
                         if (_wnd.DownloadBar.Visibility != Visibility.Visible)
                             _wnd.DownloadBar.Visibility = Visibility.Visible;
+                        _wnd.DownloadBar.IsIndeterminate = false;
                         _wnd.DownloadBar.Value = value;
                     }
                 });

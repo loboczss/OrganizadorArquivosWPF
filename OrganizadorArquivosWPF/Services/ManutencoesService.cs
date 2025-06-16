@@ -81,6 +81,8 @@ namespace OrganizadorArquivosWPF.Services
                         response.EnsureSuccessStatusCode();
 
                         var total = response.Content.Headers.ContentLength ?? -1L;
+                        if (total <= 0)
+                            progress?.Report(-1);
                         using (var stream = await response.Content.ReadAsStreamAsync())
                         using (var ms = new MemoryStream())
                         {
@@ -93,6 +95,8 @@ namespace OrganizadorArquivosWPF.Services
                                 readTotal += read;
                                 if (total > 0)
                                     progress?.Report((int)(readTotal * 100 / total));
+                                else
+                                    progress?.Report(-1);
                             }
 
                             xml = Encoding.UTF8.GetString(ms.ToArray());

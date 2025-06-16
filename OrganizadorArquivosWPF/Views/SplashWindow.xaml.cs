@@ -14,9 +14,17 @@ namespace OrganizadorArquivosWPF.Views
 
         public void SetProgress(int value)
         {
-            if (value < 0) value = 0;
+            if (value < 0)
+            {
+                Progress.IsIndeterminate = true;
+                StatusText.Text = "Baixando dados...";
+                PercentText.Text = string.Empty;
+                return;
+            }
+
+            Progress.IsIndeterminate = false;
             if (value > 100) value = 100;
-            Progress.Value = value;
+            Progress.Value = value < 0 ? 0 : value;
             PercentText.Text = $"{value}%";
         }
     }
