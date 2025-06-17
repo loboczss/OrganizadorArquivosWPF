@@ -203,18 +203,15 @@ namespace OrganizadorArquivosWPF.Services
                 {
                     { "Funcionário", nomeFuncionario },
                     { "Matrícula", matriculaFuncionario },
-                    { "Empresa", RaizOneEng },
-                    { "Tipo de Sistema", sistema },
-                    { "Sistema do Cliente", tipoSistema },
-                    { "Versão do Programa", Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "(N/A)" },
-                    { "Usuário Windows", Environment.UserName },
-                    { "Data/Hora", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) },
-                    { "Pasta de Origem", sourceFolder },
+                    { "Data/Hora", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) },                 
                     { "Destino", LastDestination },
                     { "OS", record?.NumOS ?? "(N/A)" },
                     { "Cliente", record?.NomeCliente ?? "(N/A)" },
                     { "ID SIGFI", record?.IdSigfi ?? "(N/A)" },
-                    { "UC", record?.UC ?? "(N/A)" }
+                    { "UC", record?.UC ?? "(N/A)" },
+                    { "Tipo de Sistema", sistema },
+                    { "Sistema do Cliente", tipoSistema },
+                    { "Versão do Programa", Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "(N/A)" },
                 };
 
                 _logger.Info($"Início da Renomeação por: {nomeFuncionario} (Matrícula: {matriculaFuncionario})");

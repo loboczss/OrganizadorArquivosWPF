@@ -261,11 +261,15 @@ namespace OrganizadorArquivosWPF
                     _usuario.Matricula,
                     reporter);
 
-                BtnAbrir.Visibility = Visibility.Visible;
+                // Descomente essa linha abaixo para liberar o botão abrir
+                // BtnAbrir.Visibility = Visibility.Visible;
 
-                // Limpa o log visual após concluir a operação com sucesso
+                // Limpa o log visual, texto da O.S e abre a pasta do cliente após concluir a operação com sucesso
                 _log.Clear();
+                TxtOS.Clear();
                 _log.Info($"Pasta selecionada: {_pastaOrigem}");
+                if (_renamer != null && Directory.Exists(_renamer.LastDestination))
+                    Process.Start("explorer.exe", _renamer.LastDestination);
             }
             catch (Exception ex)
             {
