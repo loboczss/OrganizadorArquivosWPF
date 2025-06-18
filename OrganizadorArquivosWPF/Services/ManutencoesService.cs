@@ -1,25 +1,33 @@
+// ManutencoesService.cs  —  compatível com C# 7.3 e .NET Framework 4.x
+// -------------------------------------------------------------------
+// NuGet necessários:
+//   Install-Package Dropbox.Api
+//   Install-Package Newtonsoft.Json
+
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
-using System.Collections.Generic;
-using System.Linq;
-using OrganizadorArquivosWPF.Models;
-using System.Xml.Linq;
 using System.Timers;
-
+using Dropbox.Api;
+using Dropbox.Api.Files;
+using Newtonsoft.Json.Linq;
+using OrganizadorArquivosWPF.Models;
 
 namespace OrganizadorArquivosWPF.Services
 {
-    /// <summary>
-    /// Obtém os dados de manutenção a partir da internet e mantém uma cópia offline em JSON.
-    /// </summary>
     public class ManutencoesService
     {
-        private const string ApiUrl = "http://wseletrotransol.service4.sinapi.com.br/dadosbanco.php?action=manutencoes";
+        // === CREDENCIAIS DO DROPBOX ===========================================
+        private const string DropboxToken =
+@"sl.u.AFxIVnN-nbzNi02QTU_5bC7igCwpHNfuWz5kr6Jg7LaivptkwnVh5-hhSUshCFzARHNp6oE4xPSTvSMn_jhMJI5N4GDcNo-I3gp1b9UykecYwiYbBOWhzqjPb7boLt2SrUHql_jHYmnO2xz4Ofe4L2se-y5ySVHfkspq1v7nyJ2th-98tdROXGu4A0BV1MFxgbdv1rSaQO8_brB0Ti4HJuyWyhhrup0fqe0kDAhGmzH3WVlvuPsxejfudjkqV6KkEBlx3A6Ptt19TIOqVwu5SQgHK6g8AOtONwmxS4gNSaewhbgqzfXPaTfeXKzwYlS0abg76L53q8tD-gC0BdvMAeKsOBRlO5x_WC0NF3Z95shCqWNBTbuiQSqfKCKv9k120dfAyDmBTCSfAPwAIeGmc1j_Lenqmw6WY1a5P4o0Zjp7AEubj3UCJ45dcollwNwJ08HnQ2wIyu5Trq70ZCshYKMV5UF79Sxu8vx6GmYxWFTIl5vfOkJf5kfx_k8vID0K1M3enXNVLnTA2MF8Vq2mxmCTA4taSqWgwi50wO3xsM2lXRN9dIKJcFbZWz8m_msmmYdK9p6ZdWkDifVlyF4cHW5-SeVgdk5h1W_xxOkFMpIZDkC_ZI7UVdCieozRLZzWXnJToEKm4V-abgIY5SC-G-VeWAxJBM4ITgBCZP_f6698Xz1BEvoK33lmbG2KRI_lYEUJVa1iPZVGMPjsZMRNOMH9UN6LqldkTvfq4xZeSHF19eZ-puOgwgTcIIT8SaUgEHFFpL6ZaGe23mDMi0Gnn1U-fHG8836gqUr7gWyk22rVDCGTOS9QjqvVrQjk2kAs7FDWW_C9j17D6QEcNBDBnPwDpyhIHqprsn2pnH2xZlyC50UP42orUx-lVs9yPoYtjoSnVKPnVaOP_vnuJbV_AH8jGPKm2cxXhKCj3YIx1ypmRs9avmf4mHhdX2ImY5D-uZTUYB4PCzgqz9zFzBPxhfu5BBkASSrC616UC-0PUsP_a9lpmashuIXE6PuxcOupSbTlxIfmFCwJ5jCMvPLlVKpm4sLVB89FmQiPyQcWSSjSQ-uegJe-kRJjXCYfpte3yyVWegGn3keCz9aVCXqZc5LSK73FSHOiP3bzNGyxUFKi5y_ZKjd1Cu9s5Tzt4d8QieWfjj2Ha3Ixf4Ku2XNB6o32f-RfU2v-9C7YJUM4y2OVaKRjTHHrpdjIVE6GXdsvDqyzfjoV0Rl4_ayBzlCCwZVubc0Qw4hHvYO8a1x5Myo8yC99fC5rntSd0TkWFFRSUk8oHs533QJKXint3yBaNxTNR9WTFyoDIYayeJ5mE9_b8g";
+        // “App folder” ⇒ raiz = "", se quisesse subpasta: "/MinhaSubpasta"
+        private const string DropboxFolder = "";
+
+        // ======================================================================
 
         private static readonly string OfflinePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -30,92 +38,41 @@ namespace OrganizadorArquivosWPF.Services
         private Timer _timer;
         private IProgress<int> _timerProgress;
 
-
-        /// <summary>
-        /// Disparado ao concluir a obtenção de dados. O bool indica se
-        /// os dados vieram da internet (true) ou do cache offline (false).
-        /// </summary>
         public event Action<DateTime, bool> UpdateCompleted;
-
-        /// <summary>
-        /// Último conjunto de dados obtido.
-        /// </summary>
         public JArray Dados => _dados;
 
-        /// Caminho para o arquivo em cache contendo o JSON baixado.
-        /// </summary>
         public static string CacheFilePath => OfflinePath;
 
-        /// <summary>
-        /// Retorna a data de escrita do arquivo de cache ou null se inexistente.
-        /// </summary>
         public static DateTime? GetCacheTimestamp()
         {
             try
             {
                 return File.Exists(OfflinePath) ? File.GetLastWriteTime(OfflinePath) : (DateTime?)null;
             }
-            catch
-            {
-                return null;
-            }
+            catch { return null; }
         }
 
-        /// <summary>
-        /// Retorna os dados de manutenção. Se houver internet, atualiza o arquivo offline.
-        /// </summary>
+        // --------------------- DOWNLOAD / CACHE -------------------------------
         public async Task<JArray> ObterDadosAsync(IProgress<int> progress = null)
         {
             progress?.Report(0);
-            string xml = null;
-            string json = null;
             bool fromInternet = false;
 
             if (TemInternet())
             {
                 try
                 {
-                    using (var http = new HttpClient())
-                    using (var response = await http.GetAsync(ApiUrl, HttpCompletionOption.ResponseHeadersRead))
-                    {
-                        response.EnsureSuccessStatusCode();
+                    string json = await BaixarUltimoJsonDropboxAsync(progress);
+                    Directory.CreateDirectory(Path.GetDirectoryName(OfflinePath));
+                    File.WriteAllText(OfflinePath, json, Encoding.UTF8);
 
-                        var total = response.Content.Headers.ContentLength ?? -1L;
-                        if (total <= 0)
-                            progress?.Report(-1);
-                        using (var stream = await response.Content.ReadAsStreamAsync())
-                        using (var ms = new MemoryStream())
-                        {
-                            var buffer = new byte[8192];
-                            long readTotal = 0;
-                            int read;
-                            while ((read = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
-                            {
-                                ms.Write(buffer, 0, read);
-                                readTotal += read;
-                                if (total > 0)
-                                    progress?.Report((int)(readTotal * 100 / total));
-                                else
-                                    progress?.Report(-1);
-                            }
-
-                            xml = Encoding.UTF8.GetString(ms.ToArray());
-                        }
-
-                        var array = ConverterXmlParaArray(xml);
-                        json = array.ToString();
-
-                        Directory.CreateDirectory(Path.GetDirectoryName(OfflinePath));
-                        File.WriteAllText(OfflinePath, json, Encoding.UTF8);
-
-                        _dados = array;
-                        fromInternet = true;
-                        progress?.Report(100);
-                    }
+                    _dados = JArray.Parse(json);
+                    fromInternet = true;
+                    progress?.Report(100);
                 }
                 catch
                 {
-                    // continua e tenta usar o cache offline
+                    // se falhar, usa cache
                 }
             }
 
@@ -123,15 +80,9 @@ namespace OrganizadorArquivosWPF.Services
             {
                 try
                 {
-                    if (File.Exists(OfflinePath))
-                    {
-                        json = File.ReadAllText(OfflinePath, Encoding.UTF8);
-                        _dados = JArray.Parse(json);
-                    }
-                    else
-                    {
-                        _dados = new JArray();
-                    }
+                    _dados = File.Exists(OfflinePath)
+                        ? JArray.Parse(File.ReadAllText(OfflinePath, Encoding.UTF8))
+                        : new JArray();
                     progress?.Report(100);
                 }
                 catch
@@ -145,9 +96,7 @@ namespace OrganizadorArquivosWPF.Services
             return _dados;
         }
 
-        /// <summary>
-        /// Converte uma <see cref="JArray"/> em uma lista de <see cref="ClientRecord"/>.
-        /// </summary>
+        // -------------------------- PARSE -------------------------------------
         public static List<ClientRecord> ParseClientRecords(JArray array)
         {
             var list = new List<ClientRecord>();
@@ -156,7 +105,8 @@ namespace OrganizadorArquivosWPF.Services
             foreach (JObject obj in array.OfType<JObject>())
             {
                 string numos = obj.Value<string>("NUMOS") ?? string.Empty;
-                string uf = obj.Value<string>("UF") ?? (numos.Length >= 2 ? numos.Substring(0, 2).ToUpperInvariant() : string.Empty);
+                string uf = obj.Value<string>("UF") ??
+                           (numos.Length >= 2 ? numos.Substring(0, 2).ToUpperInvariant() : string.Empty);
 
                 list.Add(new ClientRecord
                 {
@@ -174,110 +124,119 @@ namespace OrganizadorArquivosWPF.Services
                     NomeArquivoBase = string.Empty
                 });
             }
-
             return list;
         }
 
-        /// <summary>
-        /// Lê o arquivo JSON em cache e converte em registros de cliente.
-        /// </summary>
         public List<ClientRecord> LoadCachedRecords()
         {
-            if (!File.Exists(OfflinePath))
-                return new List<ClientRecord>();
-
-            try
-            {
-                var json = File.ReadAllText(OfflinePath, Encoding.UTF8);
-                var array = JArray.Parse(json);
-                return ParseClientRecords(array);
-            }
-            catch
-            {
-                return new List<ClientRecord>();
-            }
+            if (!File.Exists(OfflinePath)) return new List<ClientRecord>();
+            try { return ParseClientRecords(JArray.Parse(File.ReadAllText(OfflinePath, Encoding.UTF8))); }
+            catch { return new List<ClientRecord>(); }
         }
 
-        /// <summary>
-        /// Obtém os dados de manutenção e converte para registros de cliente.
-        /// </summary>
-        public async Task<List<ClientRecord>> ObterClientRecordsAsync(IProgress<int> progress = null)
+        public async Task<List<ClientRecord>> ObterClientRecordsAsync(IProgress<int> p = null)
         {
-            var arr = await ObterDadosAsync(progress);
+            var arr = await ObterDadosAsync(p);
             return ParseClientRecords(arr);
         }
 
-        private static JArray ConverterXmlParaArray(string xml)
+        // ---------------------  DROPBOX HELPERS --------------------------------
+        private async Task<string> BaixarUltimoJsonDropboxAsync(IProgress<int> progress)
         {
-            var arr = new JArray();
-            try
+            if (string.IsNullOrWhiteSpace(DropboxToken))
+                throw new InvalidOperationException("DropboxToken não definido.");
+
+            Console.WriteLine($">>> Conectando ao Dropbox na pasta '{DropboxFolder}'...");
+            using (var dbx = new DropboxClient(DropboxToken))
             {
-                var doc = XDocument.Parse(xml);
-                foreach (var post in doc.Descendants("post"))
+                ListFolderResult page;
+                try
                 {
-                    var obj = new JObject();
-                    foreach (var el in post.Elements())
-                        obj[el.Name.LocalName] = el.Value;
-                    arr.Add(obj);
+                    page = await dbx.Files.ListFolderAsync(DropboxFolder);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ERRO] Falha ao listar a pasta: {ex.GetType().Name}: {ex.Message}");
+                    throw;
+                }
+
+                Console.WriteLine($">>> Total de entradas retornadas: {page.Entries.Count}");
+                foreach (var entry in page.Entries)
+                {
+                    bool isFile = entry.IsFile;
+                    string name = entry.Name;
+                    string mod = isFile
+                        ? ((FileMetadata)entry).ServerModified.ToString("s")
+                        : "-";
+                    Console.WriteLine($"    • {name} (IsFile: {isFile}, ServerModified: {mod})");
+                }
+
+                var jsonFiles = page.Entries
+                    .Where(e => e.IsFile && e.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                Console.WriteLine($">>> Arquivos .json encontrados: {jsonFiles.Count}");
+                if (!jsonFiles.Any())
+                    throw new FileNotFoundException("Nenhum arquivo .json encontrado no Dropbox.");
+
+                var escolhido = jsonFiles
+                    .OrderByDescending(e => ((FileMetadata)e).ServerModified)
+                    .First();
+
+                Console.WriteLine($">>> Escolhido para download: {escolhido.Name} ({((FileMetadata)escolhido).ServerModified:dd/MM/yyyy HH:mm:ss})");
+                progress?.Report(-1);
+
+                try
+                {
+                    using (var resp = await dbx.Files.DownloadAsync(escolhido.PathLower))
+                    {
+                        return await resp.GetContentAsStringAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ERRO] Falha ao baixar '{escolhido.Name}': {ex.GetType().Name}: {ex.Message}");
+                    throw;
                 }
             }
-            catch
-            {
-                // retorna array vazio em caso de XML malformado
-            }
-            return arr;
         }
+
+
 
         private static bool TemInternet()
         {
             try
             {
-                using (var client = new WebClient())
-                    client.DownloadString("https://www.bing.com");
+                using (var wc = new WebClient())
+                    wc.DownloadString("https://www.google.com/generate_204");
                 return true;
             }
-            catch
-            {
-                return false;
-            }
+            catch { return false; }
         }
 
-        /// <summary>
-        /// Inicia a atualização automática dos dados em intervalo fixo.
-        /// </summary>
-        public void StartAutoUpdate(TimeSpan interval, IProgress<int> progress = null)
+        // ------------------ ATUALIZAÇÃO AUTOMÁTICA ----------------------------
+        public void StartAutoUpdate(TimeSpan interval, IProgress<int> p = null)
         {
-            if (_timer != null)
-                return;
+            if (_timer != null) return;
 
-            _timerProgress = progress;
-
-            _timer = new Timer(interval.TotalMilliseconds)
-            {
-                AutoReset = true,
-                Enabled = true
-            };
+            _timerProgress = p;
+            _timer = new Timer(interval.TotalMilliseconds) { AutoReset = true, Enabled = true };
             _timer.Elapsed += async (s, e) =>
             {
                 _timer.Enabled = false;
                 try { await ObterDadosAsync(_timerProgress); }
-                catch { /* ignorar erros de download */ }
+                catch { }
                 finally { _timer.Enabled = true; }
             };
         }
 
-        /// <summary>
-        /// Para a atualização automática.
-        /// </summary>
         public void StopAutoUpdate()
         {
-            if (_timer != null)
-            {
-                _timer.Stop();
-                _timer.Dispose();
-                _timer = null;
-                _timerProgress = null;
-            }
+            if (_timer == null) return;
+            _timer.Stop();
+            _timer.Dispose();
+            _timer = null;
+            _timerProgress = null;
         }
     }
 }

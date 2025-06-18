@@ -242,3 +242,5 @@ D:\Dev\OrganizadorArquivosWPF\OrganizadorArquivosWPF\obj\Release\OrganizadorArqu
 D:\Dev\OrganizadorArquivosWPF\OrganizadorArquivosWPF\obj\Release\Organiza.54B4641A.Up2Date
 D:\Dev\OrganizadorArquivosWPF\OrganizadorArquivosWPF\obj\Release\OrganizadorArquivosWPF.exe
 D:\Dev\OrganizadorArquivosWPF\OrganizadorArquivosWPF\obj\Release\OrganizadorArquivosWPF.pdb
+D:\Dev\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Release\Dropbox.Api.dll
+D:\Dev\OrganizadorArquivosWPF\OrganizadorArquivosWPF\bin\Release\Dropbox.Api.xml
