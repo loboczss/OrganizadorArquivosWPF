@@ -80,7 +80,14 @@ namespace OrganizadorArquivosWPF.Services
                     File.WriteAllText(OfflinePath, json, Encoding.UTF8);
 
                     Console.WriteLine("📜 Lendo JSON...");
-                    _dados = JArray.Parse(json);
+                    var obj = JObject.Parse(json);
+                    var array = obj.Properties().First().Value as JArray;
+
+                    if (array == null)
+                        throw new Exception("❌ JSON não contém um array válido.");
+
+                    _dados = array;
+
 
                     fromInternet = true;
                     Console.WriteLine($"✅ Dados carregados do Dropbox com {_dados.Count} registros.");
