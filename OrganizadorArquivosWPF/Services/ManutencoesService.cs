@@ -32,6 +32,7 @@ namespace OrganizadorArquivosWPF.Services
             "OneEngRenamer",
             "manutencoes.json");
 
+        private readonly LoggerService _logger;
         private JArray _dados = new JArray();
         private Timer _timer;
         private IProgress<int> _timerProgress;
@@ -39,6 +40,11 @@ namespace OrganizadorArquivosWPF.Services
 
         public event Action<DateTime, bool> UpdateCompleted;
         public JArray Dados => _dados;
+
+        public ManutencoesService(LoggerService logger = null)
+        {
+            _logger = logger;
+        }
 
         public static string CacheFilePath => OfflinePath;
 
@@ -68,29 +74,29 @@ namespace OrganizadorArquivosWPF.Services
             {
                 try
                 {
-                    Console.WriteLine("🔗 Tentando baixar dados do Dropbox...");
+                    _logger?.Info("🔗 Tentando baixar dados do Dropbox...");
 
                     string json = await BaixarUltimoJsonDropboxAsync(progress);
 
                     if (string.IsNullOrEmpty(json) || json.Trim() == "[]")
                         throw new Exception("⚠️ Arquivo baixado está vazio ou inválido.");
 
-                    Console.WriteLine("💾 Salvando arquivo local...");
+                    _logger?.Info("💾 Salvando arquivo local...");
                     Directory.CreateDirectory(Path.GetDirectoryName(OfflinePath));
                     File.WriteAllText(OfflinePath, json, Encoding.UTF8);
 
-                    Console.WriteLine("📜 Lendo JSON...");
+                    _logger?.Info("📜 Lendo JSON...");
                     _dados = JArray.Parse(json);
 
                     fromInternet = true;
-                    Console.WriteLine($"✅ Dados carregados do Dropbox com {_dados.Count} registros.");
+                    _logger?.Info($"✅ Dados carregados do Dropbox com {_dados.Count} registros.");
 
                     progress?.Report(100);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ERRO] Durante download ou leitura do Dropbox: {ex.Message}");
-                    Console.WriteLine("⚠️ Usando dados do cache...");
+                    _logger?.Error($"Durante download ou leitura do Dropbox: {ex.Message}");
+                    _logger?.Warning("⚠️ Usando dados do cache...");
                 }
             }
 
@@ -98,17 +104,17 @@ namespace OrganizadorArquivosWPF.Services
             {
                 try
                 {
-                    Console.WriteLine("📦 Carregando dados do cache local...");
+                    _logger?.Info("📦 Carregando dados do cache local...");
                     _dados = File.Exists(OfflinePath)
                         ? JArray.Parse(File.ReadAllText(OfflinePath, Encoding.UTF8))
                         : new JArray();
 
-                    Console.WriteLine($"✅ Cache carregado com {_dados.Count} registros.");
+                    _logger?.Info($"✅ Cache carregado com {_dados.Count} registros.");
                     progress?.Report(100);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ERRO] Falha ao ler cache local: {ex.Message}");
+                    _logger?.Error($"Falha ao ler cache local: {ex.Message}");
                     _dados = new JArray();
                     progress?.Report(100);
                 }
@@ -173,7 +179,7 @@ namespace OrganizadorArquivosWPF.Services
                 }
                 catch when (tentativa < maxTentativas)
                 {
-                    Console.WriteLine($"[ERRO] Tentativa {tentativa} falhou, tentando novamente...");
+                    _logger?.Warning($"Tentativa {tentativa} falhou, tentando novamente...");
                     await Task.Delay(1000 * tentativa);
                 }
             }
@@ -181,7 +187,7 @@ namespace OrganizadorArquivosWPF.Services
 
         private async Task<string> BaixarJsonDropboxInternoAsync(IProgress<int> progress)
         {
-            Console.WriteLine($">>> Conectando ao Dropbox na pasta '{DropboxFolder}'...");
+            _logger?.Info($"Conectando ao Dropbox na pasta '{DropboxFolder}'...");
 
             string accessToken = await ObterAccessTokenAsync();
             if (string.IsNullOrEmpty(accessToken))
@@ -196,17 +202,17 @@ namespace OrganizadorArquivosWPF.Services
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ERRO] Falha ao listar a pasta: {ex.GetType().Name}: {ex.Message}");
+                    _logger?.Error($"Falha ao listar a pasta: {ex.GetType().Name}: {ex.Message}");
                     throw;
                 }
 
-                Console.WriteLine($">>> Total de entradas na pasta: {page.Entries.Count}");
+                _logger?.Info($"Total de entradas na pasta: {page.Entries.Count}");
 
                 var jsonFiles = page.Entries
                     .Where(e => e.IsFile && e.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
                     .ToList();
 
-                Console.WriteLine($">>> Arquivos .json encontrados: {jsonFiles.Count}");
+                _logger?.Info($"Arquivos .json encontrados: {jsonFiles.Count}");
 
                 if (!jsonFiles.Any())
                     throw new FileNotFoundException("❌ Nenhum arquivo .json encontrado no Dropbox.");
@@ -215,7 +221,7 @@ namespace OrganizadorArquivosWPF.Services
                     .OrderByDescending(e => ((FileMetadata)e).ServerModified)
                     .First();
 
-                Console.WriteLine($">>> Download: {escolhido.Name} ({((FileMetadata)escolhido).ServerModified:dd/MM/yyyy HH:mm:ss})");
+                _logger?.Info($"Download: {escolhido.Name} ({((FileMetadata)escolhido).ServerModified:dd/MM/yyyy HH:mm:ss})");
                 progress?.Report(-1);
 
                 try
@@ -227,7 +233,7 @@ namespace OrganizadorArquivosWPF.Services
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ERRO] Falha ao baixar '{escolhido.Name}': {ex.GetType().Name}: {ex.Message}");
+                    _logger?.Error($"Falha ao baixar '{escolhido.Name}': {ex.GetType().Name}: {ex.Message}");
                     throw;
                 }
             }
@@ -267,13 +273,13 @@ namespace OrganizadorArquivosWPF.Services
                 _executandoAtualizacao = true;
                 try
                 {
-                    Console.WriteLine("🔄 Iniciando atualização automática...");
+                    _logger?.Info("🔄 Iniciando atualização automática...");
                     await ObterDadosAsync(_timerProgress);
-                    Console.WriteLine("✅ Atualização automática concluída.");
+                    _logger?.Info("✅ Atualização automática concluída.");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ERRO] Erro no auto update: {ex.Message}");
+                    _logger?.Error($"Erro no auto update: {ex.Message}");
                 }
                 finally
                 {

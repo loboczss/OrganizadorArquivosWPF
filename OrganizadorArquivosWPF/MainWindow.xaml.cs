@@ -148,7 +148,7 @@ namespace OrganizadorArquivosWPF
                 var logFileService = new LogFileService();
                 _renamer = new RenamerService(_log, logFileService);
                 _update = new AtualizadorService();
-                _manutencoes = new ManutencoesService();
+                _manutencoes = new ManutencoesService(_log);
             });
 
             // Carrega registros em memória (pode demorar um pouco)
