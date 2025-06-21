@@ -17,7 +17,7 @@ namespace OrganizadorArquivosWPF.Views
             if (value < 0)
             {
                 Progress.IsIndeterminate = true;
-                StatusText.Text = "Iniciando download...";
+                TxtStatus.Text = "Iniciando download...";
                 PercentText.Text = string.Empty;
                 return;
             }
@@ -28,9 +28,9 @@ namespace OrganizadorArquivosWPF.Views
             PercentText.Text = $"{value}%";
 
             if (value >= 100)
-                StatusText.Text = "Download concluído";
+                TxtStatus.Text = "Download concluído";
             else
-                StatusText.Text = $"Baixando dados ({value}%)";
+                TxtStatus.Text = $"Baixando dados ({value}%)";
         }
     }
 }

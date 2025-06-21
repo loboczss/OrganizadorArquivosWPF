@@ -65,6 +65,8 @@ namespace OrganizadorArquivosWPF.Services
         private readonly Dictionary<string, int> _linhasDinamicas = new Dictionary<string, int>();
         private readonly List<string> _linhasLog = new List<string>();
 
+        public event Action<string> StatusChanged;
+
         private void CriarOuAtualizarLinha(string chave, string texto)
         {
             Application.Current.Dispatcher.InvokeAsync(delegate
@@ -79,7 +81,7 @@ namespace OrganizadorArquivosWPF.Services
                     _linhasLog.Add(texto);
                     _linhasDinamicas[chave] = _linhasLog.Count - 1;
                 }
-                // dispare aqui event/binding para UI observar _linhasLog
+                StatusChanged?.Invoke(texto);
             });
         }
 
@@ -159,9 +161,9 @@ namespace OrganizadorArquivosWPF.Services
                     fromInternet = true;
                     progress?.Report(100);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // falha momentânea, vai usar cache
+                    StatusChanged?.Invoke($"Erro ao baixar dados: {ex.Message}");
                 }
             }
 
@@ -174,10 +176,11 @@ namespace OrganizadorArquivosWPF.Services
                         : new JArray();
                     progress?.Report(100);
                 }
-                catch
+                catch (Exception ex)
                 {
                     _dados = new JArray();
                     progress?.Report(100);
+                    StatusChanged?.Invoke($"Erro ao carregar cache: {ex.Message}");
                 }
             }
 
