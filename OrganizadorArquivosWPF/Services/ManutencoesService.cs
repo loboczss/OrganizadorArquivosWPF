@@ -170,7 +170,23 @@ namespace OrganizadorArquivosWPF.Services
         }
 
         // ---------------------  DROPBOX HELPERS --------------------------------
-        private async Task<string> BaixarUltimoJsonDropboxAsync(IProgress<int> progress)
+        private async Task<string> BaixarUltimoJsonDropboxAsync(IProgress<int> progress, int maxTentativas = 3)
+        {
+            for (int tentativa = 1; ; tentativa++)
+            {
+                try
+                {
+                    return await BaixarJsonDropboxInternoAsync(progress);
+                }
+                catch when (tentativa < maxTentativas)
+                {
+                    Console.WriteLine($"[ERRO] Tentativa {tentativa} falhou, tentando novamente...");
+                    await Task.Delay(1000 * tentativa);
+                }
+            }
+        }
+
+        private async Task<string> BaixarJsonDropboxInternoAsync(IProgress<int> progress)
         {
             Console.WriteLine($">>> Conectando ao Dropbox na pasta '{DropboxFolder}'...");
 
