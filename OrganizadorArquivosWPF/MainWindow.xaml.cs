@@ -50,13 +50,14 @@ namespace OrganizadorArquivosWPF
                         _wnd.DownloadBar.Value = 100;
                         _wnd.DownloadBar.Visibility = Visibility.Collapsed;
                         _wnd.DownloadBar.IsIndeterminate = false;
+                        _wnd.TxtSyncStatus.Text = "Download concluído";
                     }
                     else if (value < 0)
                     {
                         if (_wnd.DownloadBar.Visibility != Visibility.Visible)
                             _wnd.DownloadBar.Visibility = Visibility.Visible;
                         _wnd.DownloadBar.IsIndeterminate = true;
-                        _wnd.TxtSyncStatus.Text = "Baixando dados...";
+                        _wnd.TxtSyncStatus.Text = "Iniciando download...";
                     }
                     else
                     {
@@ -64,6 +65,7 @@ namespace OrganizadorArquivosWPF
                             _wnd.DownloadBar.Visibility = Visibility.Visible;
                         _wnd.DownloadBar.IsIndeterminate = false;
                         _wnd.DownloadBar.Value = value;
+                        _wnd.TxtSyncStatus.Text = $"Baixando dados ({value}%)";
                     }
                 });
             }
