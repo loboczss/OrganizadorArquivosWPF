@@ -210,7 +210,6 @@
     </ApplicationDefinition>
     <Compile Include="Models\UsuarioRecord.cs" />
     <Compile Include="Services\AtualizadorService.cs" />
-    <Compile Include="Services\ExcelService.cs" />
     <Compile Include="Services\FuncionariosService.cs" />
     <Compile Include="Services\GerarTokenService.cs" />
     <Compile Include="Services\LogFileService.cs" />

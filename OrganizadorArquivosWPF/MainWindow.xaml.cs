@@ -75,7 +75,7 @@ namespace OrganizadorArquivosWPF
         #endregion
 
         #region Campos e serviços (mais “leves”)
-        private ExcelService _excel;               // passado a instanciar só quando precisar
+
         private LoggerService _log;
         private NotifyIcon _notifyIcon;
         private RenamerService _renamer;
@@ -149,7 +149,6 @@ namespace OrganizadorArquivosWPF
             //    - Instanciar ExcelService pode carregar bibliotecas COM do Excel, etc.
             await Task.Run(() =>
             {
-                _excel = new ExcelService();
                 var logFileService = new LogFileService();
                 _renamer = new RenamerService(_log, logFileService);
                 _update = new AtualizadorService();
