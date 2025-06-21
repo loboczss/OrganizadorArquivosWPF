@@ -3,11 +3,15 @@
   "WorkspaceRootPath": "D:\\Dev\\OrganizadorArquivosWPF\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{486E8737-93A9-40CE-8053-3B71AC68AE50}|OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj|D:\\Dev\\OrganizadorArquivosWPF\\organizadorarquivoswpf\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{486E8737-93A9-40CE-8053-3B71AC68AE50}|OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj|d:\\dev\\organizadorarquivoswpf\\organizadorarquivoswpf\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{486E8737-93A9-40CE-8053-3B71AC68AE50}|OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj|solutionrelative:organizadorarquivoswpf\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{486E8737-93A9-40CE-8053-3B71AC68AE50}|OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj|d:\\dev\\organizadorarquivoswpf\\organizadorarquivoswpf\\services\\manutencoesservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{486E8737-93A9-40CE-8053-3B71AC68AE50}|OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj|D:\\Dev\\OrganizadorArquivosWPF\\organizadorarquivoswpf\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{486E8737-93A9-40CE-8053-3B71AC68AE50}|OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj|solutionrelative:organizadorarquivoswpf\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{486E8737-93A9-40CE-8053-3B71AC68AE50}|OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj|D:\\Dev\\OrganizadorArquivosWPF\\organizadorarquivoswpf\\services\\manutencoesservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{486E8737-93A9-40CE-8053-3B71AC68AE50}|OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj|solutionrelative:organizadorarquivoswpf\\services\\manutencoesservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
@@ -49,10 +53,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{486E8737-93A9-40CE-8053-3B71AC68AE50}|OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj|D:\\Dev\\OrganizadorArquivosWPF\\organizadorarquivoswpf\\views\\loginwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{486E8737-93A9-40CE-8053-3B71AC68AE50}|OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj|solutionrelative:organizadorarquivoswpf\\views\\loginwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{486E8737-93A9-40CE-8053-3B71AC68AE50}|OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj|D:\\Dev\\OrganizadorArquivosWPF\\organizadorarquivoswpf\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
-      "RelativeMoniker": "D:0:0:{486E8737-93A9-40CE-8053-3B71AC68AE50}|OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj|solutionrelative:organizadorarquivoswpf\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{486E8737-93A9-40CE-8053-3B71AC68AE50}|OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj|D:\\Dev\\OrganizadorArquivosWPF\\organizadorarquivoswpf\\services\\atualizadorservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -127,7 +127,7 @@
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 8,
               "Title": "GerarTokenService.cs",
               "DocumentMoniker": "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\Services\\GerarTokenService.cs",
               "RelativeDocumentMoniker": "OrganizadorArquivosWPF\\Services\\GerarTokenService.cs",
@@ -135,12 +135,11 @@
               "RelativeToolTip": "OrganizadorArquivosWPF\\Services\\GerarTokenService.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAC4AAAAWAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-06-21T13:07:40.135Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-06-21T13:07:40.135Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 5,
               "Title": "TrayService.cs",
               "DocumentMoniker": "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\Services\\TrayService.cs",
               "RelativeDocumentMoniker": "OrganizadorArquivosWPF\\Services\\TrayService.cs",
@@ -148,18 +147,17 @@
               "RelativeToolTip": "OrganizadorArquivosWPF\\Services\\TrayService.cs",
               "ViewState": "AgIAABIAAAAAAAAAAAAAACEAAABEAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-06-16T18:13:26.753Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-06-16T18:13:26.753Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "ManutencoesService.cs",
               "DocumentMoniker": "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\Services\\ManutencoesService.cs",
               "RelativeDocumentMoniker": "OrganizadorArquivosWPF\\Services\\ManutencoesService.cs",
               "ToolTip": "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\Services\\ManutencoesService.cs",
               "RelativeToolTip": "OrganizadorArquivosWPF\\Services\\ManutencoesService.cs",
-              "ViewState": "AgIAAD0AAAAAAAAAAAAYwFkAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAADQAAAAAAAAAAAAYwEUAAAARAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-06-14T17:14:09.647Z",
               "EditorCaption": ""
@@ -189,7 +187,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "UpdatePromptWindow.xaml.cs",
               "DocumentMoniker": "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\Views\\UpdatePromptWindow.xaml.cs",
               "RelativeDocumentMoniker": "OrganizadorArquivosWPF\\Views\\UpdatePromptWindow.xaml.cs",
@@ -197,8 +195,7 @@
               "RelativeToolTip": "OrganizadorArquivosWPF\\Views\\UpdatePromptWindow.xaml.cs",
               "ViewState": "AgIAAAUAAAAAAAAAAAAswDIAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-05-21T21:31:07.515Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-21T21:31:07.515Z"
             },
             {
               "$type": "Document",
@@ -214,7 +211,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "UsuarioRecord.cs",
               "DocumentMoniker": "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\Models\\UsuarioRecord.cs",
               "RelativeDocumentMoniker": "OrganizadorArquivosWPF\\Models\\UsuarioRecord.cs",
@@ -222,8 +219,7 @@
               "RelativeToolTip": "OrganizadorArquivosWPF\\Models\\UsuarioRecord.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-05-19T19:35:53.792Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-19T19:35:53.792Z"
             },
             {
               "$type": "Document",
@@ -261,7 +257,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 12,
               "Title": "LoginWindow.xaml.cs",
               "DocumentMoniker": "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\Views\\LoginWindow.xaml.cs",
               "RelativeDocumentMoniker": "OrganizadorArquivosWPF\\Views\\LoginWindow.xaml.cs",
@@ -273,7 +269,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 7,
               "Title": "FuncionariosService.cs",
               "DocumentMoniker": "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\Services\\FuncionariosService.cs",
               "RelativeDocumentMoniker": "OrganizadorArquivosWPF\\Services\\FuncionariosService.cs",
@@ -281,8 +277,7 @@
               "RelativeToolTip": "OrganizadorArquivosWPF\\Services\\FuncionariosService.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAHwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-05-19T18:20:51.785Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-19T18:20:51.785Z"
             },
             {
               "$type": "Document",
@@ -307,7 +302,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 6,
               "Title": "SyncVerifierService.cs",
               "DocumentMoniker": "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\Services\\SyncVerifierService.cs",
               "RelativeDocumentMoniker": "OrganizadorArquivosWPF\\Services\\SyncVerifierService.cs",
@@ -315,8 +310,7 @@
               "RelativeToolTip": "OrganizadorArquivosWPF\\Services\\SyncVerifierService.cs",
               "ViewState": "AgIAABoAAAAAAAAAAAAuwHYAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-05-14T16:00:15.763Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-14T16:00:15.763Z"
             },
             {
               "$type": "Document",
@@ -349,14 +343,14 @@
               "RelativeDocumentMoniker": "OrganizadorArquivosWPF\\MainWindow.xaml.cs",
               "ToolTip": "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\MainWindow.xaml.cs",
               "RelativeToolTip": "OrganizadorArquivosWPF\\MainWindow.xaml.cs",
-              "ViewState": "AgIAACIAAAAAAAAAAAAYwDoAAAAYAAAAAAAAAA==",
+              "ViewState": "AgIAALEAAAAAAAAAAAAAANIAAAAgAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-05-14T14:18:14.676Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 10,
               "Title": "AssemblyInfo.cs",
               "DocumentMoniker": "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\Properties\\AssemblyInfo.cs",
               "RelativeDocumentMoniker": "OrganizadorArquivosWPF\\Properties\\AssemblyInfo.cs",
@@ -380,7 +374,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 11,
               "Title": "App.xaml.cs",
               "DocumentMoniker": "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\App.xaml.cs",
               "RelativeDocumentMoniker": "OrganizadorArquivosWPF\\App.xaml.cs",
@@ -428,7 +422,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 9,
               "Title": "RenamerService.cs",
               "DocumentMoniker": "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\Services\\RenamerService.cs",
               "RelativeDocumentMoniker": "OrganizadorArquivosWPF\\Services\\RenamerService.cs",
@@ -464,7 +458,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 1,
               "Title": "MainWindow.xaml",
               "DocumentMoniker": "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\MainWindow.xaml",
               "RelativeDocumentMoniker": "OrganizadorArquivosWPF\\MainWindow.xaml",
