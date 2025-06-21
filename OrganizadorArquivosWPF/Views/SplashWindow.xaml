@@ -41,7 +41,7 @@
             </StackPanel>
 
         <!-- Texto de status -->
-        <TextBlock x:Name="StatusText" Grid.Row="1"
+        <TextBlock x:Name="TxtStatus" Grid.Row="1"
                    Text="Sincronizando dados, aguarde..."
                    FontSize="14"
                    Foreground="#555"
