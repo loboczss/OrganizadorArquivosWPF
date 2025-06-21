@@ -9,11 +9,13 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Microsoft.Win32;
+using AppForms = System.Windows.Forms.Application;
 using System.Linq;
 using Ookii.Dialogs.Wpf;
 using OrganizadorArquivosWPF.Models;
 using OrganizadorArquivosWPF.Services;
 using OrganizadorArquivosWPF.Views;
+using System.Windows.Forms;
 
 namespace OrganizadorArquivosWPF
 {
@@ -75,6 +77,7 @@ namespace OrganizadorArquivosWPF
         #region Campos e serviços (mais “leves”)
         private ExcelService _excel;               // passado a instanciar só quando precisar
         private LoggerService _log;
+        private NotifyIcon _notifyIcon;
         private RenamerService _renamer;
         private AtualizadorService _update;
         private ManutencoesService _manutencoes;
@@ -93,7 +96,7 @@ namespace OrganizadorArquivosWPF
         {
             _usuario = usuario ?? throw new ArgumentNullException(nameof(usuario));
             InitializeComponent();
-
+            ConfigurarNotifyIcon();
             // Inicializa coleção de logs e serviço de log visual
             _logs = new ObservableCollection<LogEntry>();
             _log = new LoggerService(_logs, Dispatcher);
@@ -181,7 +184,7 @@ namespace OrganizadorArquivosWPF
         {
             if (string.IsNullOrWhiteSpace(_pastaOrigem) || string.IsNullOrWhiteSpace(TxtOS.Text))
             {
-                MessageBox.Show("Informe pasta e Nº OS.",
+                System.Windows.MessageBox.Show("Informe pasta e Nº OS.",
                                 "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -227,7 +230,7 @@ namespace OrganizadorArquivosWPF
             catch (Exception ex)
             {
                 _log.Error($"Erro ao ler base de dados: {ex.Message}");
-                MessageBox.Show($"Erro ao ler base de dados: {ex.Message}",
+                System.Windows.MessageBox.Show($"Erro ao ler base de dados: {ex.Message}",
                                 "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
                 ToggleUIBusy(false);
                 return;
@@ -276,7 +279,7 @@ namespace OrganizadorArquivosWPF
             catch (Exception ex)
             {
                 _log.Error($"Erro no renomeio: {ex.Message}");
-                MessageBox.Show($"Erro no renomeio: {ex.Message}",
+                System.Windows.MessageBox.Show($"Erro no renomeio: {ex.Message}",
                                 "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
@@ -324,7 +327,7 @@ namespace OrganizadorArquivosWPF
 
         private bool ConfirmarCliente(string nomeCliente)
         {
-            var result = MessageBox.Show(
+            var result = System.Windows.MessageBox.Show(
                 $"Cliente:\n\n{nomeCliente}\n\nContinuar?",
                 "Confirmação",
                 MessageBoxButton.YesNo,
@@ -380,6 +383,44 @@ namespace OrganizadorArquivosWPF
             DownloadBar.IsIndeterminate = false;
             DownloadBar.Visibility = Visibility.Collapsed;
         }
+
+        // ===================== System Tray (Bandeja) ======================
+        private void ConfigurarNotifyIcon()
+        {
+            _notifyIcon = new NotifyIcon
+            {
+                Icon = System.Drawing.Icon.ExtractAssociatedIcon(
+                    System.Reflection.Assembly.GetExecutingAssembly().Location),
+                Visible = true,
+                Text = "Organizador de Arquivos - One Engenharia"
+            };
+
+            // ► Menu da bandeja
+            var contextMenu = new ContextMenuStrip();
+            contextMenu.Items.Add("Restaurar", null, (s, e) => MostrarJanela());
+            contextMenu.Items.Add("Verificar Atualização", null, (s, e) => BtnCheckUpdate_Click(null, null));
+            contextMenu.Items.Add(new ToolStripSeparator());
+            contextMenu.Items.Add("Sair", null, (s, e) => FecharAplicativo());
+
+            _notifyIcon.ContextMenuStrip = contextMenu;
+
+            // ► Clique duplo → Restaurar a janela
+            _notifyIcon.DoubleClick += (s, e) => MostrarJanela();
+        }
+
+        private void MostrarJanela()
+        {
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
+        }
+
+        private void FecharAplicativo()
+        {
+            _notifyIcon.Visible = false;
+            AppForms.Exit();
+        }
+
 
         /// <summary>
         /// Atualiza o status de sincronização (I/O leve: File.Exists ou rede).
@@ -452,7 +493,7 @@ namespace OrganizadorArquivosWPF
                                        "AtualizadorSilencioso.bat");
             if (!File.Exists(batPath))
             {
-                MessageBox.Show($"Arquivo de atualização não encontrado:\n{batPath}",
+                System.Windows.MessageBox.Show($"Arquivo de atualização não encontrado:\n{batPath}",
                                 "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
@@ -499,6 +540,14 @@ namespace OrganizadorArquivosWPF
             Hide();
         }
 
+        protected override void OnStateChanged(EventArgs e)
+        {
+            if (WindowState == WindowState.Minimized)
+                Hide();
+
+            base.OnStateChanged(e);
+        }
+
         private void MainWindow_Closed(object sender, EventArgs e)
         {
             if (_manutencoes != null)
@@ -508,6 +557,9 @@ namespace OrganizadorArquivosWPF
             }
         }
 
+        // -----------------------------------------------------------------------------
+        // 🔄 Evento disparado pelo ManutencoesService sempre que ele termina uma tentativa
+        // -----------------------------------------------------------------------------
         private void Manutencoes_UpdateCompleted(DateTime time, bool fromInternet)
         {
             Dispatcher.Invoke(() =>
@@ -516,16 +568,37 @@ namespace OrganizadorArquivosWPF
                     _logs.Remove(_lastUpdateEntry);
 
                 if (fromInternet)
+                {
+                    // ✅ Sincronizou com sucesso
                     _log.Info($"Dados de manutenção atualizados em {time:HH:mm:ss}");
+                }
                 else
-                    _log.Warning($"Falha ao atualizar dados de manutenção - usando cache ({time:HH:mm:ss})");
+                {
+                    // ❌ Falhou – decide se avisa ou não, conforme “idade” do cache
+                    DateTime? cacheTime = ManutencoesService.GetCacheTimestamp();
+
+                    bool cacheVelho =
+                        !cacheTime.HasValue ||
+                        (DateTime.Now - cacheTime.Value).TotalDays >= 2;
+
+                    if (cacheVelho)
+                    {
+                        _log.Warning("Falha ao atualizar dados de manutenção – " +
+                                     "dados do cache têm mais de 2 dias");
+                    }
+                    else
+                    {
+                        // Cache ainda “fresco”: só um INFO discreto
+                        _log.Info($"Falha momentânea, usando cache recente ({cacheTime.Value:dd/MM HH:mm})");
+                    }
+                }
 
                 _lastUpdateEntry = _logs.LastOrDefault();
             });
 
             try
             {
-                // Usa os dados já baixados pelo serviço para evitar recursão do evento
+                // Usa os dados já baixados pelo serviço
                 _cachedRecords = ManutencoesService.ParseClientRecords(_manutencoes.Dados);
                 _log.Info($"Base de dados atualizada — {_cachedRecords.Count} registros carregados.");
             }
@@ -534,9 +607,10 @@ namespace OrganizadorArquivosWPF
                 _log.Error($"❌ Erro ao atualizar dados de manutenção: {ex.Message}");
             }
 
-            // Atualiza a label de data da base
+            // Atualiza a label “Última atualização” sem aguardar
             _ = AtualizarDataPlanilhaAsync();
         }
+
 
         #endregion
     }
