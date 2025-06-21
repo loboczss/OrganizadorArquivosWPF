@@ -506,7 +506,7 @@ namespace OrganizadorArquivosWPF
             }
         }
 
-        private async void Manutencoes_UpdateCompleted(DateTime time, bool fromInternet)
+        private void Manutencoes_UpdateCompleted(DateTime time, bool fromInternet)
         {
             Dispatcher.Invoke(() =>
             {
@@ -523,8 +523,8 @@ namespace OrganizadorArquivosWPF
 
             try
             {
-                // 🔥 Aqui atualiza a base em memória com os dados mais recentes!
-                _cachedRecords = await _manutencoes.ObterClientRecordsAsync(_downloadReporter);
+                // Usa os dados já baixados pelo serviço para evitar recursão do evento
+                _cachedRecords = ManutencoesService.ParseClientRecords(_manutencoes.Dados);
                 _log.Info($"Base de dados atualizada — {_cachedRecords.Count} registros carregados.");
             }
             catch (Exception ex)
