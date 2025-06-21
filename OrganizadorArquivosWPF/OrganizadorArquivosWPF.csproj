@@ -212,6 +212,7 @@
     <Compile Include="Services\AtualizadorService.cs" />
     <Compile Include="Services\ExcelService.cs" />
     <Compile Include="Services\FuncionariosService.cs" />
+    <Compile Include="Services\GerarTokenService.cs" />
     <Compile Include="Services\LogFileService.cs" />
     <Compile Include="Services\LoggerService.cs" />
     <Compile Include="Services\RenamerService.cs" />

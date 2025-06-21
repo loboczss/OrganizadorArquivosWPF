@@ -506,7 +506,7 @@ namespace OrganizadorArquivosWPF
             }
         }
 
-        private void Manutencoes_UpdateCompleted(DateTime time, bool fromInternet)
+        private async void Manutencoes_UpdateCompleted(DateTime time, bool fromInternet)
         {
             Dispatcher.Invoke(() =>
             {
@@ -520,8 +520,22 @@ namespace OrganizadorArquivosWPF
 
                 _lastUpdateEntry = _logs.LastOrDefault();
             });
+
+            try
+            {
+                // 🔥 Aqui atualiza a base em memória com os dados mais recentes!
+                _cachedRecords = await _manutencoes.ObterClientRecordsAsync(_downloadReporter);
+                _log.Info($"Base de dados atualizada — {_cachedRecords.Count} registros carregados.");
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"❌ Erro ao atualizar dados de manutenção: {ex.Message}");
+            }
+
+            // Atualiza a label de data da base
             _ = AtualizarDataPlanilhaAsync();
         }
+
         #endregion
     }
 }
