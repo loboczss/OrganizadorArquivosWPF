@@ -225,7 +225,16 @@ namespace OrganizadorArquivosWPF.Services
                     wc.DownloadString("https://www.google.com/generate_204");
                 return true;
             }
-            catch { return false; }
+            catch
+            {
+                try
+                {
+                    using (var wc = new WebClient())
+                        wc.DownloadString("https://www.bing.com");
+                    return true;
+                }
+                catch { return false; }
+            }
         }
 
         // ------------------ ATUALIZAÇÃO AUTOMÁTICA ----------------------------
