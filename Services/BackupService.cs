@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Threading.Tasks;
 using Dropbox.Api;
 using Dropbox.Api.Files;
+using OrganizadorArquivosWPF.Models;
 
 namespace OrganizadorArquivosWPF.Services
 {
@@ -58,6 +59,41 @@ namespace OrganizadorArquivosWPF.Services
             {
                 try { if (File.Exists(zipLocal)) File.Delete(zipLocal); } catch { }
             }
+        }
+
+        /// <summary>
+        /// Executa o mesmo processo do <see cref="RenamerService"/>, salvando o
+        /// resultado localmente e opcionalmente enviando para o Dropbox.
+        /// </summary>
+        public async Task ProcessarBackupAsync(
+            string pastaOrigem,
+            ClientRecord registro,
+            string sistema,
+            string tipoSistema,
+            string destinoLocal,
+            bool enviarParaNuvem,
+            string nomeFuncionario,
+            string matriculaFuncionario,
+            IProgress<int> progress = null)
+        {
+            if (string.IsNullOrWhiteSpace(pastaOrigem) || !Directory.Exists(pastaOrigem))
+                throw new DirectoryNotFoundException("Pasta de origem inválida para backup.");
+
+            var logFileService = new LogFileService();
+            var renamer = new RenamerService(_log, logFileService);
+            await renamer.RenameAsync(
+                pastaOrigem,
+                registro,
+                sistema,
+                tipoSistema,
+                true,
+                destinoLocal,
+                nomeFuncionario,
+                matriculaFuncionario,
+                progress);
+
+            if (enviarParaNuvem)
+                await EnviarBackupAsync(renamer.LastDestination);
         }
     }
 }
