@@ -151,8 +151,8 @@ namespace OrganizadorArquivosWPF
                 _manutencoes = new ManutencoesService();
             });
 
-            // Carrega registros em memória (pode demorar um pouco)
-            _cachedRecords = await _manutencoes.ObterClientRecordsAsync(_downloadReporter);
+            // Carrega rapidamente registros do cache local (sem novo download)
+            _cachedRecords = await Task.Run(() => _manutencoes.LoadCachedRecords());
 
             // 2) Atualiza status de sincronização
             await AtualizarStatusSincronizacaoAsync();
