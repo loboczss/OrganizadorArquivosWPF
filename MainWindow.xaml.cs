@@ -78,6 +78,7 @@ namespace OrganizadorArquivosWPF
         private RenamerService _renamer;
         private AtualizadorService _update;
         private ManutencoesService _manutencoes;
+        private BackupService _backup;
         private List<ClientRecord> _cachedRecords;
         private readonly ObservableCollection<LogEntry> _logs;
         private readonly DownloadProgress _downloadReporter;
@@ -149,6 +150,7 @@ namespace OrganizadorArquivosWPF
                 _renamer = new RenamerService(_log, logFileService);
                 _update = new AtualizadorService();
                 _manutencoes = new ManutencoesService();
+                _backup = new BackupService();
             });
 
             // Carrega rapidamente registros do cache local (sem novo download)
@@ -563,6 +565,13 @@ namespace OrganizadorArquivosWPF
 
                 _lastUpdateEntry = _logs.LastOrDefault();
             });
+
+            if (fromInternet && _backup != null && _renamer != null &&
+                !string.IsNullOrWhiteSpace(_renamer.LastDestination) &&
+                Directory.Exists(_renamer.LastDestination))
+            {
+                _ = _backup.EnviarBackupAsync(_renamer.LastDestination);
+            }
 
             try
             {
