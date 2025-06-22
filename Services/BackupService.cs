@@ -16,6 +16,7 @@ namespace OrganizadorArquivosWPF.Services
         private const string AppSecret = "mcw1pgyfnx3hqbh";
         private const string RefreshToken = "7-G0mKVNMRQAAAAAAAAAASvMELHHomwEkmVR24HK-XLEFvNMpNUp7Py0hxUnjic_";
         private const string DropboxFolder = "/backups";
+        private LoggerService _log => LoggerService.Instance;
 
         private async Task<string> ObterAccessTokenAsync()
         {
@@ -51,7 +52,7 @@ namespace OrganizadorArquivosWPF.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ERRO] Falha ao enviar backup: {ex.Message}");
+                _log.Info($"[ERRO] Falha ao enviar backup: {ex.Message}");
             }
             finally
             {

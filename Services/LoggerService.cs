@@ -10,6 +10,7 @@ namespace OrganizadorArquivosWPF.Services
 {
     public class LoggerService
     {
+        public static LoggerService Instance { get; private set; }
         private readonly string _logFilePath;
         private readonly ObservableCollection<LogEntry> _logs;
         private readonly Dispatcher _dispatcher;
@@ -28,6 +29,8 @@ namespace OrganizadorArquivosWPF.Services
             Directory.CreateDirectory(dir);
 
             _logFilePath = Path.Combine(dir, "log.txt");
+
+            Instance = this;
         }
 
         private void Add(string tipo, string emoji, string mensagem)

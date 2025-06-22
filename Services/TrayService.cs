@@ -16,6 +16,7 @@ namespace OrganizadorArquivosWPF.Services
         private readonly ManutencoesService _manutencoes;
         private readonly TimeSpan _interval = TimeSpan.FromMinutes(5);
         private IProgress<int> _progress;
+        private LoggerService _log => LoggerService.Instance;
 
         public TrayService()
         {
@@ -66,7 +67,7 @@ namespace OrganizadorArquivosWPF.Services
                                 await _manutencoes.ObterDadosAsync(_progress);
                                 _manutencoes.ClearData();
                             }
-                            catch (Exception ex) { Console.WriteLine($"[ERRO] Download manual: {ex.Message}"); }
+                            catch (Exception ex) { _log.Info($"[ERRO] Download manual: {ex.Message}"); }
                         }
                     });
                 }

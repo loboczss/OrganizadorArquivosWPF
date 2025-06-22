@@ -43,6 +43,7 @@ namespace OrganizadorArquivosWPF.Services
         private Timer _timer;
         private IProgress<int> _timerProgress;
         private bool _executandoAtualizacao;
+        private LoggerService _log => LoggerService.Instance;
 
         public event Action<DateTime, bool> UpdateCompleted;
         public JArray Dados => _dados;
@@ -88,12 +89,12 @@ namespace OrganizadorArquivosWPF.Services
                     fromInternet = true;
                     progress?.Report(100);
 
-                    Console.WriteLine($"✅ Dados carregados do Dropbox ({_dados.Count} registros).");
+                    _log.Info($"✅ Dados carregados do Dropbox ({_dados.Count} registros).");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ERRO] Download/merge: {ex.Message}");
-                    Console.WriteLine("⚠️ Tentando usar o cache local…");
+                    _log.Info($"[ERRO] Download/merge: {ex.Message}");
+                    _log.Info("⚠️ Tentando usar o cache local…");
                 }
             }
 
@@ -105,12 +106,12 @@ namespace OrganizadorArquivosWPF.Services
                         ? JArray.Parse(File.ReadAllText(OfflinePath, Encoding.UTF8))
                         : new JArray();
 
-                    Console.WriteLine($"✅ Cache carregado: {_dados.Count} registros.");
+                    _log.Info($"✅ Cache carregado: {_dados.Count} registros.");
                     progress?.Report(100);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ERRO] Falha ao ler cache: {ex.Message}");
+                    _log.Info($"[ERRO] Falha ao ler cache: {ex.Message}");
                     _dados = new JArray();
                     progress?.Report(100);
                 }
@@ -130,7 +131,7 @@ namespace OrganizadorArquivosWPF.Services
                 try { return await BaixarArquivosDropboxInternoAsync(progress); }
                 catch (Exception ex) when (tentativa < maxTentativas)
                 {
-                    Console.WriteLine($"[ERRO] Tentativa {tentativa} falhou ({ex.Message}). Retentando…");
+                    _log.Info($"[ERRO] Tentativa {tentativa} falhou ({ex.Message}). Retentando…");
                     await Task.Delay(1000 * tentativa);
                 }
             }
@@ -139,7 +140,7 @@ namespace OrganizadorArquivosWPF.Services
 
         private async Task<Dictionary<string, string>> BaixarArquivosDropboxInternoAsync(IProgress<int> progress)
         {
-            Console.WriteLine($">>> Conectando ao Dropbox…");
+            _log.Info($">>> Conectando ao Dropbox…");
             string accessToken = await ObterAccessTokenAsync();
             if (string.IsNullOrEmpty(accessToken))
                 throw new Exception("❌ Falha ao gerar Access Token.");
@@ -171,14 +172,14 @@ namespace OrganizadorArquivosWPF.Services
 
                     if (!arquivosPadrao.Any())
                     {
-                        Console.WriteLine($"⚠️ Não encontrou arquivo para '{padrao}'.");
+                        _log.Info($"⚠️ Não encontrou arquivo para '{padrao}'.");
                         concluidos++;
                         progress?.Report(concluidos * 100 / totalEtapas);
                         continue;
                     }
 
                     var meta = arquivosPadrao.First();
-                    Console.WriteLine($">>> Baixando {meta.Name} ({meta.ServerModified:dd/MM/yyyy HH:mm:ss})");
+                    _log.Info($">>> Baixando {meta.Name} ({meta.ServerModified:dd/MM/yyyy HH:mm:ss})");
 
                     try
                     {
@@ -189,7 +190,7 @@ namespace OrganizadorArquivosWPF.Services
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[ERRO] Falha ao baixar '{meta.Name}': {ex.Message}");
+                        _log.Info($"[ERRO] Falha ao baixar '{meta.Name}': {ex.Message}");
                     }
                     finally
                     {
@@ -225,7 +226,7 @@ namespace OrganizadorArquivosWPF.Services
 
                     if (arr == null || arr.Count == 0)
                     {
-                        Console.WriteLine($"⚠️ Arquivo '{kv.Key}' não continha array válido.");
+                        _log.Info($"⚠️ Arquivo '{kv.Key}' não continha array válido.");
                         continue;
                     }
 
@@ -234,15 +235,15 @@ namespace OrganizadorArquivosWPF.Services
                 }
                 catch (JsonException jex)
                 {
-                    Console.WriteLine($"[ERRO] JSON inválido em '{kv.Key}': {jex.Message}");
+                    _log.Info($"[ERRO] JSON inválido em '{kv.Key}': {jex.Message}");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ERRO] Falha ao processar '{kv.Key}': {ex.Message}");
+                    _log.Info($"[ERRO] Falha ao processar '{kv.Key}': {ex.Message}");
                 }
             }
 
-            Console.WriteLine($"🔗 Merge concluído: {combinado.Count} itens combinados.");
+            _log.Info($"🔗 Merge concluído: {combinado.Count} itens combinados.");
             return combinado;
         }
 
@@ -333,13 +334,13 @@ namespace OrganizadorArquivosWPF.Services
 
                 try
                 {
-                    Console.WriteLine("🔄 Auto-update iniciado…");
+                    _log.Info("🔄 Auto-update iniciado…");
                     await ObterDadosAsync(_timerProgress);
-                    Console.WriteLine("✅ Auto-update concluído.");
+                    _log.Info("✅ Auto-update concluído.");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ERRO] Auto-update: {ex.Message}");
+                    _log.Info($"[ERRO] Auto-update: {ex.Message}");
                 }
                 finally
                 {
