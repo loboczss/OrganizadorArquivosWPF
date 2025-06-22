@@ -531,6 +531,8 @@ namespace OrganizadorArquivosWPF
                 {
                     // ✅ Sincronizou com sucesso
                     _log.Info($"Dados de manutenção atualizados em {time:HH:mm:ss}");
+                    _cachedRecords = ManutencoesService.ParseClientRecords(_manutencoes.Dados);
+                    _log.Info($"Base de dados atualizada — {_cachedRecords.Count} registros carregados.");
                 }
                 else
                 {
@@ -539,17 +541,20 @@ namespace OrganizadorArquivosWPF
 
                     bool cacheVelho =
                         !cacheTime.HasValue ||
-                        (DateTime.Now - cacheTime.Value).TotalDays >= 2;
+                        (DateTime.Now - cacheTime.Value).TotalDays >= 1;
 
                     if (cacheVelho)
                     {
-                        _log.Warning("Falha ao atualizar dados de manutenção – " +
-                                     "dados do cache têm mais de 2 dias");
+                        _log.Critical("Falha ao atualizar dados de manutenção – " + "dados do cache têm mais de 1 dias");
+                        _cachedRecords = ManutencoesService.ParseClientRecords(_manutencoes.Dados);
+                        _log.Info($"Base de dados atualizada — {_cachedRecords.Count} registros carregados.");
                     }
                     else
                     {
                         // Cache ainda “fresco”: só um INFO discreto
-                        _log.Info($"Falha momentânea, usando cache recente ({cacheTime.Value:dd/MM HH:mm})");
+                        _log.Info($"Sem conexão, usando dados baixados dia ({cacheTime.Value:dd/MM HH:mm})");
+                        _cachedRecords = ManutencoesService.ParseClientRecords(_manutencoes.Dados);
+                        _log.Info($"Base de dados atualizada — {_cachedRecords.Count} registros carregados.");
                     }
                 }
 
@@ -559,18 +564,34 @@ namespace OrganizadorArquivosWPF
             try
             {
                 // Usa os dados já baixados pelo serviço
-                _cachedRecords = ManutencoesService.ParseClientRecords(_manutencoes.Dados);
-                _log.Info($"Base de dados atualizada — {_cachedRecords.Count} registros carregados.");
             }
             catch (Exception ex)
             {
-                _log.Error($"❌ Erro ao atualizar dados de manutenção: {ex.Message}");
+                _log.Error($"Erro ao atualizar dados de manutenção: {ex.Message}");
             }
 
             // Atualiza a label “Última atualização” sem aguardar
             _ = AtualizarDataPlanilhaAsync();
         }
 
+        /// <summary>
+        /// Dispara manualmente o download dos dados de manutenção utilizando
+        /// o mesmo serviço e reporter da janela principal.
+        /// </summary>
+        public async Task BaixarDadosAgoraAsync()
+        {
+            if (_manutencoes == null)
+                return;
+
+            try
+            {
+                await _manutencoes.ObterDadosAsync(_downloadReporter);
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Erro ao baixar dados manualmente: {ex.Message}");
+            }
+        }
 
         #endregion
     }
