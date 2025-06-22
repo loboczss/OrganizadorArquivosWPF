@@ -34,20 +34,13 @@ namespace OrganizadorArquivosWPF
             }
 
             StartShowEventListener();
-
             base.OnStartup(e);
-
             EnsureRunAtStartup();
 
             _tray = new TrayService();
-            _tray.Start(null);
-            // ------------------------------------------------------
+            await Task.Run(() => _tray.Start(null)); // <-- await real aqui
 
-
-
-            // ------------------------------------------------------
-            // 1) Prompt de atualização antes de abrir o main
-            // ------------------------------------------------------
+            // Prompt de atualização
             var updatePrompt = new UpdatePromptWindow();
             bool? wantsUpdate = updatePrompt.ShowDialog();
             if (wantsUpdate == true && updatePrompt.ShouldUpdate)
@@ -57,34 +50,22 @@ namespace OrganizadorArquivosWPF
                 return;
             }
 
-            // ------------------------------------------------------
-            // 2) Exibe Login
-            // ------------------------------------------------------
+            // Login
             var login = new LoginWindow();
             bool? loginOk = login.ShowDialog();
             if (loginOk != true)
             {
-                // Usuário cancelou login
                 Shutdown();
                 return;
             }
 
             UsuarioRecord user = login.Usuario;
 
-            // ------------------------------------------------------
-            // 3) Se não atualizou, continua para a MainWindow
-            // ------------------------------------------------------
             var main = new MainWindow(user);
             Current.MainWindow = main;
             main.Show();
-
-            // ------------------------------------------------------
-            // 4) (Opcional) Se você não esperou a syncTask, pode aguardar aqui
-            // ------------------------------------------------------
-            // await syncTask;
-            // Se a MainWindow usa dados que dependem do Excel, você pode
-            // atualizar a interface (ou mostrar um aviso) quando a Task terminar.
         }
+
 
         private void RunUpdaterBat()
         {

@@ -28,12 +28,14 @@ namespace OrganizadorArquivosWPF.Services
             };
 
             var menu = new ContextMenuStrip();
-            var openItem = new ToolStripMenuItem("Abrir") { CheckOnClick = false };
+
+            // Botão Abrir
+            var openItem = new ToolStripMenuItem("Abrir");
             openItem.Click += (s, e) =>
             {
-                Application.Current?.Dispatcher.Invoke(() =>
+                System.Windows.Application.Current?.Dispatcher.Invoke(() =>
                 {
-                    var window = Application.Current.MainWindow;
+                    var window = System.Windows.Application.Current.MainWindow;
                     if (window != null)
                     {
                         window.Show();
@@ -43,8 +45,14 @@ namespace OrganizadorArquivosWPF.Services
                     }
                 });
             };
+
+            // Botão Sair
             var exitItem = new ToolStripMenuItem("Sair");
-            exitItem.Click += (s, e) => Application.Current.Shutdown();
+            exitItem.Click += (s, e) =>
+            {
+                System.Windows.Application.Current.Shutdown();
+            };
+
             menu.Items.Add(openItem);
             menu.Items.Add(exitItem);
             _icon.ContextMenuStrip = menu;
@@ -52,7 +60,12 @@ namespace OrganizadorArquivosWPF.Services
 
         public async void Start(IProgress<int> progress)
         {
-            try { await _manutencoes.ObterDadosAsync(progress); } catch { }
+            try
+            {
+                await _manutencoes.ObterDadosAsync(progress);
+            }
+            catch { }
+
             _manutencoes.StartAutoUpdate(_interval, progress);
         }
 
