@@ -533,6 +533,7 @@ namespace OrganizadorArquivosWPF
                     _log.Info($"Dados de manutenção atualizados em {time:HH:mm:ss}");
                     _cachedRecords = ManutencoesService.ParseClientRecords(_manutencoes.Dados);
                     _log.Info($"Base de dados atualizada — {_cachedRecords.Count} registros carregados.");
+                    _manutencoes.ClearData();
                 }
                 else
                 {
@@ -548,6 +549,7 @@ namespace OrganizadorArquivosWPF
                         _log.Critical("Falha ao atualizar dados de manutenção – " + "dados do cache têm mais de 1 dias");
                         _cachedRecords = ManutencoesService.ParseClientRecords(_manutencoes.Dados);
                         _log.Info($"Base de dados atualizada — {_cachedRecords.Count} registros carregados.");
+                        _manutencoes.ClearData();
                     }
                     else
                     {
@@ -555,6 +557,7 @@ namespace OrganizadorArquivosWPF
                         _log.Info($"Sem conexão, usando dados baixados dia ({cacheTime.Value:dd/MM HH:mm})");
                         _cachedRecords = ManutencoesService.ParseClientRecords(_manutencoes.Dados);
                         _log.Info($"Base de dados atualizada — {_cachedRecords.Count} registros carregados.");
+                        _manutencoes.ClearData();
                     }
                 }
 
@@ -586,6 +589,7 @@ namespace OrganizadorArquivosWPF
             try
             {
                 await _manutencoes.ObterDadosAsync(_downloadReporter);
+                _manutencoes.ClearData();
             }
             catch (Exception ex)
             {

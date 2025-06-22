@@ -61,7 +61,11 @@ namespace OrganizadorArquivosWPF.Services
                         }
                         else
                         {
-                            try { await _manutencoes.ObterDadosAsync(_progress); }
+                            try
+                            {
+                                await _manutencoes.ObterDadosAsync(_progress);
+                                _manutencoes.ClearData();
+                            }
                             catch (Exception ex) { Console.WriteLine($"[ERRO] Download manual: {ex.Message}"); }
                         }
                     });
@@ -80,7 +84,12 @@ namespace OrganizadorArquivosWPF.Services
         {
 
             _progress = progress;
-            try { await _manutencoes.ObterDadosAsync(progress); } catch { }
+            try
+            {
+                await _manutencoes.ObterDadosAsync(progress);
+                _manutencoes.ClearData();
+            }
+            catch { }
             _manutencoes.StartAutoUpdate(_interval, progress);
         }
 
