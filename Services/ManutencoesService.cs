@@ -93,8 +93,8 @@ namespace OrganizadorArquivosWPF.Services
                 }
                 catch (Exception ex)
                 {
-                    _log.Info($"[ERRO] Download/merge: {ex.Message}");
-                    _log.Info("⚠️ Tentando usar o cache local…");
+                    _log.Error($"Download/merge: {ex.Message}");
+                    _log.Warning("Tentando usar o cache local…");
                 }
             }
 
@@ -111,7 +111,7 @@ namespace OrganizadorArquivosWPF.Services
                 }
                 catch (Exception ex)
                 {
-                    _log.Info($"[ERRO] Falha ao ler cache: {ex.Message}");
+                    _log.Error($"Falha ao ler cache: {ex.Message}");
                     _dados = new JArray();
                     progress?.Report(100);
                 }
@@ -131,7 +131,7 @@ namespace OrganizadorArquivosWPF.Services
                 try { return await BaixarArquivosDropboxInternoAsync(progress); }
                 catch (Exception ex) when (tentativa < maxTentativas)
                 {
-                    _log.Info($"[ERRO] Tentativa {tentativa} falhou ({ex.Message}). Retentando…");
+                    _log.Warning($"Tentativa {tentativa} falhou ({ex.Message}). Retentando…");
                     await Task.Delay(1000 * tentativa);
                 }
             }
@@ -172,7 +172,7 @@ namespace OrganizadorArquivosWPF.Services
 
                     if (!arquivosPadrao.Any())
                     {
-                        _log.Info($"⚠️ Não encontrou arquivo para '{padrao}'.");
+                        _log.Warning($"Não encontrou arquivo para '{padrao}'.");
                         concluidos++;
                         progress?.Report(concluidos * 100 / totalEtapas);
                         continue;
@@ -190,7 +190,7 @@ namespace OrganizadorArquivosWPF.Services
                     }
                     catch (Exception ex)
                     {
-                        _log.Info($"[ERRO] Falha ao baixar '{meta.Name}': {ex.Message}");
+                        _log.Error($"Falha ao baixar '{meta.Name}': {ex.Message}");
                     }
                     finally
                     {
@@ -226,7 +226,7 @@ namespace OrganizadorArquivosWPF.Services
 
                     if (arr == null || arr.Count == 0)
                     {
-                        _log.Info($"⚠️ Arquivo '{kv.Key}' não continha array válido.");
+                        _log.Warning($"Arquivo '{kv.Key}' não continha array válido.");
                         continue;
                     }
 
@@ -235,11 +235,11 @@ namespace OrganizadorArquivosWPF.Services
                 }
                 catch (JsonException jex)
                 {
-                    _log.Info($"[ERRO] JSON inválido em '{kv.Key}': {jex.Message}");
+                    _log.Error($"JSON inválido em '{kv.Key}': {jex.Message}");
                 }
                 catch (Exception ex)
                 {
-                    _log.Info($"[ERRO] Falha ao processar '{kv.Key}': {ex.Message}");
+                    _log.Error($"Falha ao processar '{kv.Key}': {ex.Message}");
                 }
             }
 
@@ -340,7 +340,7 @@ namespace OrganizadorArquivosWPF.Services
                 }
                 catch (Exception ex)
                 {
-                    _log.Info($"[ERRO] Auto-update: {ex.Message}");
+                    _log.Error($"Auto-update: {ex.Message}");
                 }
                 finally
                 {
