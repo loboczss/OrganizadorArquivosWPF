@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows;
 using System.Windows.Forms;
+using OrganizadorArquivosWPF;
 
 namespace OrganizadorArquivosWPF.Services
 {
@@ -47,10 +48,24 @@ namespace OrganizadorArquivosWPF.Services
                 });
             };
             var downloadItem = new ToolStripMenuItem("Baixar dados agora");
-            downloadItem.Click += async (s, e) =>
+            downloadItem.Click += (s, e) =>
             {
-                try { await _manutencoes.ObterDadosAsync(_progress); }
-                catch (Exception ex) { Console.WriteLine($"[ERRO] Download manual: {ex.Message}"); }
+                var app = System.Windows.Application.Current;
+                if (app != null)
+                {
+                    app.Dispatcher.InvokeAsync(async () =>
+                    {
+                        if (app.MainWindow is MainWindow wnd)
+                        {
+                            await wnd.BaixarDadosAgoraAsync();
+                        }
+                        else
+                        {
+                            try { await _manutencoes.ObterDadosAsync(_progress); }
+                            catch (Exception ex) { Console.WriteLine($"[ERRO] Download manual: {ex.Message}"); }
+                        }
+                    });
+                }
             };
 
             var exitItem = new ToolStripMenuItem("Sair");

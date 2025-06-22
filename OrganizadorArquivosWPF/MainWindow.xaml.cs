@@ -571,6 +571,25 @@ namespace OrganizadorArquivosWPF
             _ = AtualizarDataPlanilhaAsync();
         }
 
+        /// <summary>
+        /// Dispara manualmente o download dos dados de manutenção utilizando
+        /// o mesmo serviço e reporter da janela principal.
+        /// </summary>
+        public async Task BaixarDadosAgoraAsync()
+        {
+            if (_manutencoes == null)
+                return;
+
+            try
+            {
+                await _manutencoes.ObterDadosAsync(_downloadReporter);
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Erro ao baixar dados manualmente: {ex.Message}");
+            }
+        }
+
 
         #endregion
     }
