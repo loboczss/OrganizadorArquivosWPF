@@ -22,6 +22,7 @@ namespace OrganizadorArquivosWPF.Services
         private const string RefreshToken = "7-G0mKVNMRQAAAAAAAAAASvMELHHomwEkmVR24HK-XLEFvNMpNUp7Py0hxUnjic_";
 
         private const string DropboxFolder = ""; // Pasta raiz
+        private const string BackupFolder = "/backups"; // Pasta de backup no Dropbox
         // =====================================================================
 
         private static readonly string OfflinePath = Path.Combine(
@@ -84,6 +85,7 @@ namespace OrganizadorArquivosWPF.Services
 
                     Directory.CreateDirectory(Path.GetDirectoryName(OfflinePath));
                     File.WriteAllText(OfflinePath, _dados.ToString(Formatting.None), Encoding.UTF8);
+                    await EnviarBackupAsync(OfflinePath);
 
                     fromInternet = true;
                     progress?.Report(100);
@@ -201,6 +203,30 @@ namespace OrganizadorArquivosWPF.Services
                 // Garante 100 % mesmo se faltou arquivo
                 progress?.Report(100);
                 return resultados;
+            }
+        }
+
+        private async Task EnviarBackupAsync(string caminho)
+        {
+            if (!File.Exists(caminho)) return;
+            try
+            {
+                Console.WriteLine($">>> Enviando backup para o Dropbox…");
+                string accessToken = await ObterAccessTokenAsync();
+                if (string.IsNullOrEmpty(accessToken))
+                    throw new Exception("❌ Falha ao gerar Access Token.");
+
+                using (var dbx = new DropboxClient(accessToken))
+                using (var fs = File.OpenRead(caminho))
+                {
+                    string dropboxPath = BackupFolder + "/" + Path.GetFileName(caminho);
+                    await dbx.Files.UploadAsync(dropboxPath, WriteMode.Overwrite.Instance, body: fs);
+                }
+                Console.WriteLine("✅ Backup enviado.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERRO] Falha ao enviar backup: {ex.Message}");
             }
         }
 
