@@ -82,7 +82,9 @@ namespace OrganizadorArquivosWPF.Services
                 return;
             }
 
-            string nomeZip = DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".zip";
+            string nomeZip = Path.GetFileName(
+                Path.GetFullPath(pasta).TrimEnd(Path.DirectorySeparatorChar,
+                                              Path.AltDirectorySeparatorChar)) + ".zip";
             string zipLocal = Path.Combine(Path.GetTempPath(), nomeZip);
 
             try
