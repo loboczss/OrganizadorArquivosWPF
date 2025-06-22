@@ -14,6 +14,7 @@ namespace OrganizadorArquivosWPF.Services
         private readonly NotifyIcon _icon;
         private readonly ManutencoesService _manutencoes;
         private readonly TimeSpan _interval = TimeSpan.FromMinutes(5);
+        private IProgress<int> _progress;
 
         public TrayService()
         {
@@ -43,15 +44,25 @@ namespace OrganizadorArquivosWPF.Services
                     }
                 });
             };
+            var downloadItem = new ToolStripMenuItem("Baixar dados agora");
+            downloadItem.Click += async (s, e) =>
+            {
+                try { await _manutencoes.ObterDadosAsync(_progress); }
+                catch (Exception ex) { Console.WriteLine($"[ERRO] Download manual: {ex.Message}"); }
+            };
+
             var exitItem = new ToolStripMenuItem("Sair");
             exitItem.Click += (s, e) => Application.Current.Shutdown();
+
             menu.Items.Add(openItem);
+            menu.Items.Add(downloadItem);
             menu.Items.Add(exitItem);
             _icon.ContextMenuStrip = menu;
         }
 
         public async void Start(IProgress<int> progress)
         {
+            _progress = progress;
             try { await _manutencoes.ObterDadosAsync(progress); } catch { }
             _manutencoes.StartAutoUpdate(_interval, progress);
         }
