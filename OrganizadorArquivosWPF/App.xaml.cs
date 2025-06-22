@@ -39,41 +39,6 @@ namespace OrganizadorArquivosWPF
 
             EnsureRunAtStartup();
 
-            // ------------------------------------------------------
-            // (Opcional) 0) Abre splash e executa sincronização
-            // ------------------------------------------------------
-            var splash = new SplashWindow();
-            splash.Owner = null;       // para não ficar “presa” a outra janela
-            splash.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            splash.Show();
-            var progress = new Progress<int>(p => splash.SetProgress(p));
-            var manutencao = new ManutencoesService();
-            manutencao.StatusChanged += msg => splash.TxtStatus.Text = msg;
-
-            // Dispara sincronização e download de dados em background
-            _ = Task.Run(() => SyncVerifierService.VerificarOuSincronizarArquivo());
-            _ = Task.Run(async () =>
-            {
-                try { await manutencao.ObterDadosAsync(progress); } catch { }
-            });
-
-
-            // Aguarda breve momento apenas para mostrar o splash
-            await Task.Delay(500);
-            // Dispara sincronização e download de dados durante o splash
-            var syncTask = Task.Run(() => SyncVerifierService.VerificarOuSincronizarArquivo());
-            try
-            {
-                await manutencao.ObterDadosAsync(progress);
-            }
-            catch
-            {
-                // Ignora falhas de download no splash
-            }
-
-            // Fecha splash após completar o download
-            splash.Close();
-
             _tray = new TrayService();
             _tray.Start(null);
             // ------------------------------------------------------
