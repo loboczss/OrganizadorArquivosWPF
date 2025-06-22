@@ -531,7 +531,7 @@ namespace OrganizadorArquivosWPF
                 {
                     // ✅ Sincronizou com sucesso
                     _log.Info($"Dados de manutenção atualizados em {time:HH:mm:ss}");
-                    _cachedRecords = ManutencoesService.ParseClientRecords(_manutencoes.Dados);
+                    _cachedRecords = new List<ClientRecord>(_manutencoes.Records);
                     _log.Info($"Base de dados atualizada — {_cachedRecords.Count} registros carregados.");
                 }
                 else
@@ -546,14 +546,14 @@ namespace OrganizadorArquivosWPF
                     if (cacheVelho)
                     {
                         _log.Critical("Falha ao atualizar dados de manutenção – " + "dados do cache têm mais de 1 dias");
-                        _cachedRecords = ManutencoesService.ParseClientRecords(_manutencoes.Dados);
+                        _cachedRecords = new List<ClientRecord>(_manutencoes.Records);
                         _log.Info($"Base de dados atualizada — {_cachedRecords.Count} registros carregados.");
                     }
                     else
                     {
                         // Cache ainda “fresco”: só um INFO discreto
                         _log.Info($"Sem conexão, usando dados baixados dia ({cacheTime.Value:dd/MM HH:mm})");
-                        _cachedRecords = ManutencoesService.ParseClientRecords(_manutencoes.Dados);
+                        _cachedRecords = new List<ClientRecord>(_manutencoes.Records);
                         _log.Info($"Base de dados atualizada — {_cachedRecords.Count} registros carregados.");
                     }
                 }

@@ -15,6 +15,7 @@ namespace OrganizadorArquivosWPF.Services
         private readonly Dispatcher _dispatcher;
         private readonly object _fileLock = new object();
         private bool _logIoErrorNotified = false;
+        private const int MaxEntries = 500;
 
         public LoggerService(ObservableCollection<LogEntry> logs, Dispatcher dispatcher)
         {
@@ -33,8 +34,13 @@ namespace OrganizadorArquivosWPF.Services
         {
             var entry = new LogEntry(tipo, emoji, mensagem);
 
-            // Atualiza a UI de forma thread-safe
-            _dispatcher.Invoke(() => _logs.Add(entry));
+            // Atualiza a UI de forma thread-safe e limita itens em memória
+            _dispatcher.Invoke(() =>
+            {
+                _logs.Add(entry);
+                if (_logs.Count > MaxEntries)
+                    _logs.RemoveAt(0);
+            });
 
             // Grava em disco de forma thread-safe
             lock (_fileLock)

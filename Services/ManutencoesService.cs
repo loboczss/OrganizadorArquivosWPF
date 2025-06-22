@@ -39,12 +39,14 @@ namespace OrganizadorArquivosWPF.Services
         };
 
         private JArray _dados = new JArray();
+        private List<ClientRecord> _records = new List<ClientRecord>();
         private Timer _timer;
         private IProgress<int> _timerProgress;
         private bool _executandoAtualizacao;
 
         public event Action<DateTime, bool> UpdateCompleted;
         public JArray Dados => _dados;
+        public IReadOnlyList<ClientRecord> Records => _records;
         public static string CacheFilePath => OfflinePath;
 
         public static DateTime? GetCacheTimestamp()
@@ -114,6 +116,7 @@ namespace OrganizadorArquivosWPF.Services
                 }
             }
 
+            _records = ParseClientRecords(_dados);
             UpdateCompleted?.Invoke(DateTime.Now, fromInternet);
             return _dados;
         }
@@ -277,14 +280,22 @@ namespace OrganizadorArquivosWPF.Services
         public List<ClientRecord> LoadCachedRecords()
         {
             if (!File.Exists(OfflinePath)) return new List<ClientRecord>();
-            try { return ParseClientRecords(JArray.Parse(File.ReadAllText(OfflinePath, Encoding.UTF8))); }
-            catch { return new List<ClientRecord>(); }
+            try
+            {
+                var list = ParseClientRecords(JArray.Parse(File.ReadAllText(OfflinePath, Encoding.UTF8)));
+                _records = new List<ClientRecord>(list);
+                return list;
+            }
+            catch
+            {
+                return new List<ClientRecord>();
+            }
         }
 
         public async Task<List<ClientRecord>> ObterClientRecordsAsync(IProgress<int> p = null)
         {
-            var arr = await ObterDadosAsync(p);
-            return ParseClientRecords(arr);
+            await ObterDadosAsync(p);
+            return new List<ClientRecord>(_records);
         }
 
         // ======================  UTILIDADES  ==================================
