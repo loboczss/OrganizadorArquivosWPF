@@ -518,7 +518,7 @@ namespace OrganizadorArquivosWPF
         }
 
         // -----------------------------------------------------------------------------
-        // 🔄 Evento disparado pelo ManutencoesService sempre que ele termina uma tentativa
+        // 🔄 Evento disparado pelo ManutencoesService sempre que ele termina uma tentativajjjj
         // -----------------------------------------------------------------------------
         private void Manutencoes_UpdateCompleted(DateTime time, bool fromInternet)
         {
