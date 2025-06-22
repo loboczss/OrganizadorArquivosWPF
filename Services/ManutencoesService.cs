@@ -358,6 +358,14 @@ namespace OrganizadorArquivosWPF.Services
             _executandoAtualizacao = false;
         }
 
+        /// <summary>
+        /// Libera a memória utilizada pelos dados baixados.
+        /// </summary>
+        public void ClearData()
+        {
+            _dados = null;
+        }
+
     }
 }
 
