@@ -43,7 +43,7 @@ namespace OrganizadorArquivosWPF.Services
         private Timer _timer;
         private IProgress<int> _timerProgress;
         private bool _executandoAtualizacao;
-        private LoggerService _log => LoggerService.Instance;
+        private static LoggerService _log => LoggerService.Instance;
 
         public event Action<DateTime, bool> UpdateCompleted;
         public JArray Dados => _dados;
