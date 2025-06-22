@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
 using System.IO.Compression;
 using System.Threading.Tasks;
 using Dropbox.Api;
@@ -17,7 +18,42 @@ namespace OrganizadorArquivosWPF.Services
         private const string AppSecret = "mcw1pgyfnx3hqbh";
         private const string RefreshToken = "7-G0mKVNMRQAAAAAAAAAASvMELHHomwEkmVR24HK-XLEFvNMpNUp7Py0hxUnjic_";
         private const string DropboxFolder = "/backups";
+        private static readonly string BackupHistoryFile = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "OneEngRenamer",
+            "uploaded_backups.txt");
         private LoggerService _log => LoggerService.Instance;
+
+        private static HashSet<string> CarregarHistorico(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                    return new HashSet<string>(File.ReadAllLines(path), StringComparer.OrdinalIgnoreCase);
+            }
+            catch { }
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static void SalvarHistorico(string path, IEnumerable<string> itens)
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllLines(path, itens);
+            }
+            catch { }
+        }
+
+        private static string ExtrairOs(string pasta)
+        {
+            try
+            {
+                var dir = Path.GetFileName(pasta);
+                return dir?.Split('_')[0];
+            }
+            catch { return null; }
+        }
 
         private async Task<string> ObterAccessTokenAsync()
         {
@@ -26,12 +62,25 @@ namespace OrganizadorArquivosWPF.Services
         }
 
         /// <summary>
-        /// Compacta a pasta indicada e envia para o Dropbox.
+        /// Compacta a pasta indicada e envia para o Dropbox. O backup de uma
+        /// determinada O.S. é enviado apenas uma vez para evitar duplicados.
         /// </summary>
-        public async Task EnviarBackupAsync(string pasta)
+        public async Task EnviarBackupAsync(string pasta, string numOs = null)
         {
             if (string.IsNullOrWhiteSpace(pasta) || !Directory.Exists(pasta))
                 return;
+
+            numOs ??= ExtrairOs(pasta);
+            if (string.IsNullOrWhiteSpace(numOs))
+                return;
+
+            string histFile = BackupHistoryFile;
+            var enviados = CarregarHistorico(histFile);
+            if (enviados.Contains(numOs))
+            {
+                _log.Info($"Backup já enviado para a O.S {numOs}. Pulando envio.");
+                return;
+            }
 
             string nomeZip = DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".zip";
             string zipLocal = Path.Combine(Path.GetTempPath(), nomeZip);
@@ -49,6 +98,8 @@ namespace OrganizadorArquivosWPF.Services
                 {
                     string dropboxPath = DropboxFolder + "/" + nomeZip;
                     await dbx.Files.UploadAsync(dropboxPath, WriteMode.Overwrite.Instance, body: fs);
+                    enviados.Add(numOs);
+                    SalvarHistorico(histFile, enviados);
                 }
             }
             catch (Exception ex)
@@ -93,7 +144,7 @@ namespace OrganizadorArquivosWPF.Services
                 progress);
 
             if (enviarParaNuvem)
-                await EnviarBackupAsync(renamer.LastDestination);
+                await EnviarBackupAsync(renamer.LastDestination, registro?.NumOS);
         }
     }
 }
