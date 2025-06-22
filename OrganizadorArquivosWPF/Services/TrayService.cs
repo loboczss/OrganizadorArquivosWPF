@@ -29,9 +29,22 @@ namespace OrganizadorArquivosWPF.Services
 
             var menu = new ContextMenuStrip();
             var openItem = new ToolStripMenuItem("Abrir") { CheckOnClick = false };
-            openItem.Click += (s, e) => System.Windows.Application.Current.MainWindow?.Show();
+            openItem.Click += (s, e) =>
+            {
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    var window = Application.Current.MainWindow;
+                    if (window != null)
+                    {
+                        window.Show();
+                        if (window.WindowState == WindowState.Minimized)
+                            window.WindowState = WindowState.Normal;
+                        window.Activate();
+                    }
+                });
+            };
             var exitItem = new ToolStripMenuItem("Sair");
-            exitItem.Click += (s, e) => System.Windows.Application.Current.Shutdown();
+            exitItem.Click += (s, e) => Application.Current.Shutdown();
             menu.Items.Add(openItem);
             menu.Items.Add(exitItem);
             _icon.ContextMenuStrip = menu;
