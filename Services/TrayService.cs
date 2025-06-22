@@ -67,7 +67,7 @@ namespace OrganizadorArquivosWPF.Services
                                 await _manutencoes.ObterDadosAsync(_progress);
                                 _manutencoes.ClearData();
                             }
-                            catch (Exception ex) { _log.Info($"[ERRO] Download manual: {ex.Message}"); }
+                            catch (Exception ex) { _log.Error($"Download manual: {ex.Message}"); }
                         }
                     });
                 }

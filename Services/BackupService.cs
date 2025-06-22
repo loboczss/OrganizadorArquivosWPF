@@ -52,7 +52,7 @@ namespace OrganizadorArquivosWPF.Services
             }
             catch (Exception ex)
             {
-                _log.Info($"[ERRO] Falha ao enviar backup: {ex.Message}");
+                _log.Error($"Falha ao enviar backup: {ex.Message}");
             }
             finally
             {
