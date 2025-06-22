@@ -9,13 +9,11 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Microsoft.Win32;
-using AppForms = System.Windows.Forms.Application;
 using System.Linq;
 using Ookii.Dialogs.Wpf;
 using OrganizadorArquivosWPF.Models;
 using OrganizadorArquivosWPF.Services;
 using OrganizadorArquivosWPF.Views;
-using System.Windows.Forms;
 
 namespace OrganizadorArquivosWPF
 {
@@ -77,7 +75,6 @@ namespace OrganizadorArquivosWPF
         #region Campos e serviços (mais “leves”)
 
         private LoggerService _log;
-        private NotifyIcon _notifyIcon;
         private RenamerService _renamer;
         private AtualizadorService _update;
         private ManutencoesService _manutencoes;
@@ -96,7 +93,6 @@ namespace OrganizadorArquivosWPF
         {
             _usuario = usuario ?? throw new ArgumentNullException(nameof(usuario));
             InitializeComponent();
-            ConfigurarNotifyIcon();
             // Inicializa coleção de logs e serviço de log visual
             _logs = new ObservableCollection<LogEntry>();
             _log = new LoggerService(_logs, Dispatcher);
@@ -384,41 +380,6 @@ namespace OrganizadorArquivosWPF
         }
 
         // ===================== System Tray (Bandeja) ======================
-        private void ConfigurarNotifyIcon()
-        {
-            _notifyIcon = new NotifyIcon
-            {
-                Icon = System.Drawing.Icon.ExtractAssociatedIcon(
-                    System.Reflection.Assembly.GetExecutingAssembly().Location),
-                Visible = true,
-                Text = "Organizador de Arquivos - One Engenharia"
-            };
-
-            // ► Menu da bandeja
-            var contextMenu = new ContextMenuStrip();
-            contextMenu.Items.Add("Restaurar", null, (s, e) => MostrarJanela());
-            contextMenu.Items.Add("Verificar Atualização", null, (s, e) => BtnCheckUpdate_Click(null, null));
-            contextMenu.Items.Add(new ToolStripSeparator());
-            contextMenu.Items.Add("Sair", null, (s, e) => FecharAplicativo());
-
-            _notifyIcon.ContextMenuStrip = contextMenu;
-
-            // ► Clique duplo → Restaurar a janela
-            _notifyIcon.DoubleClick += (s, e) => MostrarJanela();
-        }
-
-        private void MostrarJanela()
-        {
-            Show();
-            WindowState = WindowState.Normal;
-            Activate();
-        }
-
-        private void FecharAplicativo()
-        {
-            _notifyIcon.Visible = false;
-            AppForms.Exit();
-        }
 
 
         /// <summary>
