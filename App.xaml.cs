@@ -37,8 +37,14 @@ namespace OrganizadorArquivosWPF
             base.OnStartup(e);
             EnsureRunAtStartup();
 
+            var splash = new SplashWindow();
+            splash.Show();
+
             _tray = new TrayService();
-            await Task.Run(() => _tray.Start(null)); // <-- await real aqui
+            var progress = new Progress<int>(v => splash.SetProgress(v));
+            await _tray.StartAsync(progress);
+
+            splash.Close();
 
             // Prompt de atualização
             var updatePrompt = new UpdatePromptWindow();

@@ -81,7 +81,7 @@ namespace OrganizadorArquivosWPF.Services
             _icon.ContextMenuStrip = menu;
         }
 
-        public async void Start(IProgress<int> progress)
+        public async Task StartAsync(IProgress<int> progress)
         {
 
             _progress = progress;
