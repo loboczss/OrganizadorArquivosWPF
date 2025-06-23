@@ -20,7 +20,6 @@ namespace OrganizadorArquivosWPF.Services
         private const string AppKey = "523wx0kknv1xj4h";
         private const string AppSecret = "mcw1pgyfnx3hqbh";
         private const string RefreshToken = "7-G0mKVNMRQAAAAAAAAAASvMELHHomwEkmVR24HK-XLEFvNMpNUp7Py0hxUnjic_";
-
         private const string DropboxFolder = ""; // Pasta raiz
         // =====================================================================
 
