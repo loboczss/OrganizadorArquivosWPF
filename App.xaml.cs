@@ -59,17 +59,13 @@ namespace OrganizadorArquivosWPF
             // Login
             var login = new LoginWindow();
             bool? loginOk = login.ShowDialog();
-            if (loginOk != true)
+            if (loginOk == true)
             {
-                Shutdown();
-                return;
+                UsuarioRecord user = login.Usuario;
+                var main = new MainWindow(user);
+                Current.MainWindow = main;
+                main.Show();
             }
-
-            UsuarioRecord user = login.Usuario;
-
-            var main = new MainWindow(user);
-            Current.MainWindow = main;
-            main.Show();
         }
 
 

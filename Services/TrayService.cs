@@ -42,14 +42,27 @@ namespace OrganizadorArquivosWPF.Services
             {
                 System.Windows.Application.Current?.Dispatcher.Invoke(() =>
                 {
-                    var window = System.Windows.Application.Current.MainWindow;
-                    if (window != null)
+                    var app = System.Windows.Application.Current;
+                    if (app == null)
+                        return;
+
+                    var window = app.MainWindow;
+                    if (window == null)
                     {
-                        window.Show();
-                        if (window.WindowState == WindowState.Minimized)
-                            window.WindowState = WindowState.Normal;
-                        window.Activate();
+                        var login = new Views.LoginWindow();
+                        if (login.ShowDialog() == true)
+                        {
+                            var main = new MainWindow(login.Usuario);
+                            app.MainWindow = main;
+                            main.Show();
+                        }
+                        return;
                     }
+
+                    window.Show();
+                    if (window.WindowState == WindowState.Minimized)
+                        window.WindowState = WindowState.Normal;
+                    window.Activate();
                 });
             };
             var downloadItem = new ToolStripMenuItem("Baixar dados agora");
