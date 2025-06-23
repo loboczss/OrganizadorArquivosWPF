@@ -70,7 +70,11 @@ namespace OrganizadorArquivosWPF.Services
             if (string.IsNullOrWhiteSpace(pasta) || !Directory.Exists(pasta))
                 return;
 
-            numOs ??= ExtrairOs(pasta);
+            if (string.IsNullOrEmpty(numOs))
+            {
+                numOs = ExtrairOs(pasta);
+            }
+
             if (string.IsNullOrWhiteSpace(numOs))
                 return;
 

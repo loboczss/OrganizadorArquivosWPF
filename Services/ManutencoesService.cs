@@ -88,13 +88,10 @@ namespace OrganizadorArquivosWPF.Services
 
                     fromInternet = true;
                     progress?.Report(100);
-
-                    _log.Info($"✅ Dados carregados do Dropbox ({_dados.Count} registros).");
                 }
                 catch (Exception ex)
                 {
-                    _log.Error($"Download/merge: {ex.Message}");
-                    _log.Warning("Tentando usar o cache local…");
+                    _log.Warning("Tentando usar o Dados local…");
                 }
             }
 
@@ -106,12 +103,12 @@ namespace OrganizadorArquivosWPF.Services
                         ? JArray.Parse(File.ReadAllText(OfflinePath, Encoding.UTF8))
                         : new JArray();
 
-                    _log.Info($"✅ Cache carregado: {_dados.Count} registros.");
+                    _log.Info($"Dados carregado: {_dados.Count} registros.");
                     progress?.Report(100);
                 }
                 catch (Exception ex)
                 {
-                    _log.Error($"Falha ao ler cache: {ex.Message}");
+                    _log.Error($"Falha ao ler Dados: {ex.Message}");
                     _dados = new JArray();
                     progress?.Report(100);
                 }
@@ -140,7 +137,6 @@ namespace OrganizadorArquivosWPF.Services
 
         private async Task<Dictionary<string, string>> BaixarArquivosDropboxInternoAsync(IProgress<int> progress)
         {
-            _log.Info($">>> Conectando ao Dropbox…");
             string accessToken = await ObterAccessTokenAsync();
             if (string.IsNullOrEmpty(accessToken))
                 throw new Exception("❌ Falha ao gerar Access Token.");
@@ -179,7 +175,6 @@ namespace OrganizadorArquivosWPF.Services
                     }
 
                     var meta = arquivosPadrao.First();
-                    _log.Info($">>> Baixando {meta.Name} ({meta.ServerModified:dd/MM/yyyy HH:mm:ss})");
 
                     try
                     {
@@ -242,8 +237,6 @@ namespace OrganizadorArquivosWPF.Services
                     _log.Error($"Falha ao processar '{kv.Key}': {ex.Message}");
                 }
             }
-
-            _log.Info($"🔗 Merge concluído: {combinado.Count} itens combinados.");
             return combinado;
         }
 
