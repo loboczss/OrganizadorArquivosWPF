@@ -15,7 +15,10 @@ namespace OrganizadorArquivosWPF.Services
     {
         private readonly NotifyIcon _icon;
         private readonly ManutencoesService _manutencoes;
-        private readonly TimeSpan _interval = TimeSpan.FromMinutes(5);
+        // Intervalo padrão para atualizações automáticas
+        // A primeira sincronização já ocorre na tela splash. Por isso, a
+        // próxima tentativa de download só deve acontecer após 10 minutos.
+        private readonly TimeSpan _interval = TimeSpan.FromMinutes(10);
         private IProgress<int> _progress;
         private LoggerService _log => LoggerService.Instance;
 
