@@ -166,8 +166,19 @@ namespace OrganizadorArquivosWPF
             try
             {
                 _manutencoes.UpdateCompleted += Manutencoes_UpdateCompleted;
-                await _manutencoes.ObterDadosAsync(_downloadReporter);
-                _manutencoes.StartAutoUpdate(TimeSpan.FromMinutes(5), _downloadReporter);
+
+                // Se o download inicial já foi realizado pela SplashScreen
+                // (através do TrayService), evitamos repetir a operação aqui.
+                DateTime? cacheTime = ManutencoesService.GetCacheTimestamp();
+                bool cacheRecente =
+                    cacheTime.HasValue &&
+                    (DateTime.Now - cacheTime.Value).TotalMinutes < 10;
+
+                if (!cacheRecente)
+                    await _manutencoes.ObterDadosAsync(_downloadReporter);
+
+                // Inicia o auto-update para rodar a cada 10 minutos
+                _manutencoes.StartAutoUpdate(TimeSpan.FromMinutes(10), _downloadReporter);
             }
             catch (Exception ex)
             {
