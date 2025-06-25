@@ -542,37 +542,34 @@ namespace OrganizadorArquivosWPF
                 if (_lastUpdateEntry != null)
                     _logs.Remove(_lastUpdateEntry);
 
+                string mensagem;
                 if (fromInternet)
                 {
-                    // ✅ Sincronizou com sucesso
-                    _log.Info($"Dados de manutenção atualizados em {time:HH:mm:ss}");
                     _cachedRecords = new List<ClientRecord>(_manutencoes.Records);
-                    _log.Info($"Base de dados atualizada — {_cachedRecords.Count} registros carregados.");
+                    mensagem = $"Dados de manutenção atualizados em {time:HH:mm:ss} — {_cachedRecords.Count} registros carregados.";
                     _manutencoes.ClearData();
+                    _log.Info(mensagem);
                 }
                 else
                 {
-                    // ❌ Falhou – decide se avisa ou não, conforme “idade” do cache
                     DateTime? cacheTime = ManutencoesService.GetCacheTimestamp();
-
                     bool cacheVelho =
                         !cacheTime.HasValue ||
                         (DateTime.Now - cacheTime.Value).TotalDays >= 1;
 
+                    _cachedRecords = new List<ClientRecord>(_manutencoes.Records);
+
                     if (cacheVelho)
                     {
-                        _log.Critical("Falha ao atualizar dados de manutenção – " + "dados do cache têm mais de 1 dias");
-                        _cachedRecords = new List<ClientRecord>(_manutencoes.Records);
-                        _log.Info($"Base de dados atualizada — {_cachedRecords.Count} registros carregados.");
+                        mensagem = $"Falha ao atualizar dados de manutenção – dados do cache têm mais de 1 dias — {_cachedRecords.Count} registros.";
                         _manutencoes.ClearData();
+                        _log.Critical(mensagem);
                     }
                     else
                     {
-                        // Cache ainda “fresco”: só um INFO discreto
-                        _log.Info($"Sem conexão, usando dados baixados dia ({cacheTime.Value:dd/MM HH:mm})");
-                        _cachedRecords = new List<ClientRecord>(_manutencoes.Records);
-                        _log.Info($"Base de dados atualizada — {_cachedRecords.Count} registros carregados.");
+                        mensagem = $"Sem conexão, usando dados baixados dia ({cacheTime.Value:dd/MM HH:mm}) — {_cachedRecords.Count} registros.";
                         _manutencoes.ClearData();
+                        _log.Info(mensagem);
                     }
                 }
 
