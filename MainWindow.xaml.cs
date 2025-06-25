@@ -14,6 +14,7 @@ using Ookii.Dialogs.Wpf;
 using OrganizadorArquivosWPF.Models;
 using OrganizadorArquivosWPF.Services;
 using OrganizadorArquivosWPF.Views;
+using OrganizadorArquivosWPF.Helpers;
 
 namespace OrganizadorArquivosWPF
 {
@@ -94,6 +95,7 @@ namespace OrganizadorArquivosWPF
         {
             _usuario = usuario ?? throw new ArgumentNullException(nameof(usuario));
             InitializeComponent();
+            Versao.GravarVersaoEmTxt();
             // Inicializa coleção de logs e serviço de log visual
             _logs = new ObservableCollection<LogEntry>();
             _log = new LoggerService(_logs, Dispatcher);
@@ -595,6 +597,7 @@ namespace OrganizadorArquivosWPF
 
             // Atualiza a label “Última atualização” sem aguardar
             _ = AtualizarDataPlanilhaAsync();
+            
         }
 
         /// <summary>

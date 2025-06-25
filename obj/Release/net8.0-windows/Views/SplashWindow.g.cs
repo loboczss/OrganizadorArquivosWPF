@@ -77,7 +77,7 @@ namespace OrganizadorArquivosWPF.Views {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/OrganizadorArquivosWPF;component/views/splashwindow.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/OrganizadorArquivosWPF;V2.0.0.0;component/views/splashwindow.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\Views\SplashWindow.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

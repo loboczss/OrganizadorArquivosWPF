@@ -6,7 +6,7 @@
   "compilationOptions": {},
   "targets": {
     ".NETCoreApp,Version=v8.0": {
-      "OrganizadorArquivosWPF/1.0.0": {
+      "OrganizadorArquivosWPF/2.0.0.0": {
         "dependencies": {
           "Azure.Core": "1.46.2",
           "Azure.Identity": "1.14.1",
@@ -371,7 +371,7 @@
     }
   },
   "libraries": {
-    "OrganizadorArquivosWPF/1.0.0": {
+    "OrganizadorArquivosWPF/2.0.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

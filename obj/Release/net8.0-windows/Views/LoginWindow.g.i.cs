@@ -69,7 +69,7 @@ namespace OrganizadorArquivosWPF.Views {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/OrganizadorArquivosWPF;component/views/loginwindow.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/OrganizadorArquivosWPF;V2.0.0.0;component/views/loginwindow.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\Views\LoginWindow.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);
