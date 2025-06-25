@@ -3,6 +3,7 @@
 
 using Azure.Identity;
 using Microsoft.Graph;
+using Microsoft.Graph.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OrganizadorArquivosWPF.Models;
@@ -24,7 +25,7 @@ namespace OrganizadorArquivosWPF.Services
         private const string ClientSecret = "JFd8Q~hHgTYYo0P0EjAM8mpe3xm3.5vTfCHRFc.T";
 
         private const string SPDomain = "oneengenharia.sharepoint.com";
-        private const string SPSitePath = "/sites/OneEngenharia";
+        private const string SPSitePath = "OneEngenharia";
         private const string DocumentLibraryName = "ArquivosJSON";
 
         private static readonly string OfflinePath = Path.Combine(
@@ -138,7 +139,7 @@ namespace OrganizadorArquivosWPF.Services
         {
             if (!string.IsNullOrEmpty(_driveId)) return _driveId;
 
-            var site = await _graph.Sites[$"{SPDomain}:/sites{SPSitePath}"].GetAsync();
+            var site = await _graph.Sites[$"{SPDomain}:/sites/{SPSitePath}"].GetAsync();
             var drives = await _graph.Sites[site.Id].Drives.GetAsync();
             var drive = drives.Value.FirstOrDefault(d => d.Name == DocumentLibraryName);
 
@@ -153,8 +154,8 @@ namespace OrganizadorArquivosWPF.Services
         {
             string driveId = await ObterDriveIdAsync();
 
-            var page = await _graph.Drives[driveId].Root.Children.GetAsync();
-
+            Microsoft.Graph.Models.DriveItemCollectionResponse page =
+                await _graph.Drives[driveId].Items["root"].Children.GetAsync();
             var jsonFiles = page.Value
                 .Where(it => it.File != null && it.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
                 .ToList();
