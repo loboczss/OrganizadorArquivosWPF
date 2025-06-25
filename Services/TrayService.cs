@@ -65,7 +65,7 @@ namespace OrganizadorArquivosWPF.Services
                     window.Activate();
                 });
             };
-            var downloadItem = new ToolStripMenuItem("Baixar dados agora");
+            var downloadItem = new ToolStripMenuItem("Sincronizar dados agora");
             downloadItem.Click += (s, e) =>
             {
                 var app = System.Windows.Application.Current;
