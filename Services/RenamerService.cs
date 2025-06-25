@@ -99,6 +99,15 @@ namespace OrganizadorArquivosWPF.Services
             // Se existir exatamente uma, retorna direto
             if (candidatas.Length == 1) return candidatas[0];
 
+            // Se nenhuma pasta foi encontrada, usa Documentos como base
+            if (candidatas.Length == 0)
+            {
+                var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                var fallback = Path.Combine(docs, "OrganizadorArquivos");
+                Directory.CreateDirectory(fallback);
+                return fallback;
+            }
+
             // Caso contrário, pergunta ao usuário (InputBox já provê a UX esperada)
             int escolha = 0;
             while (escolha < 1 || escolha > 100)
