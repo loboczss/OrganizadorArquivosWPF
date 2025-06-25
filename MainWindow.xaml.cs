@@ -84,6 +84,8 @@ namespace OrganizadorArquivosWPF
         private readonly ObservableCollection<LogEntry> _logs;
         private readonly DownloadProgress _downloadReporter;
         private LogEntry _lastUpdateEntry;
+        private LogEntry _lastBackupEntry;
+        private bool _manualSyncRunning;
         private string _pastaOrigem;
         #endregion
 
@@ -576,11 +578,24 @@ namespace OrganizadorArquivosWPF
                 _lastUpdateEntry = _logs.LastOrDefault();
             });
 
-            if (fromInternet && _backup != null && _renamer != null &&
+            if (!_manualSyncRunning && fromInternet && _backup != null && _renamer != null &&
                 !string.IsNullOrWhiteSpace(_renamer.LastDestination) &&
                 Directory.Exists(_renamer.LastDestination))
             {
-                _ = _backup.EnviarBackupAsync(_renamer.LastDestination);
+                _ = _backup.EnviarBackupAsync(_renamer.LastDestination)
+                    .ContinueWith(t =>
+                    {
+                        if (!t.IsFaulted)
+                        {
+                            Dispatcher.Invoke(() =>
+                            {
+                                if (_lastBackupEntry != null)
+                                    _logs.Remove(_lastBackupEntry);
+                                _log.Info($"Backup concluído às {DateTime.Now:HH:mm:ss}");
+                                _lastBackupEntry = _logs.LastOrDefault();
+                            });
+                        }
+                    });
             }
 
             try
@@ -606,14 +621,40 @@ namespace OrganizadorArquivosWPF
             if (_manutencoes == null)
                 return;
 
+            _manualSyncRunning = true;
+            Task backupTask = Task.CompletedTask;
+
+            if (_backup != null && _renamer != null &&
+                !string.IsNullOrWhiteSpace(_renamer.LastDestination) &&
+                Directory.Exists(_renamer.LastDestination))
+            {
+                backupTask = _backup.EnviarBackupAsync(_renamer.LastDestination);
+            }
+
             try
             {
-                await _manutencoes.ObterDadosAsync(_downloadReporter);
+                var downloadTask = _manutencoes.ObterDadosAsync(_downloadReporter);
+                await Task.WhenAll(downloadTask, backupTask);
                 _manutencoes.ClearData();
+
+                if (backupTask.Status == TaskStatus.RanToCompletion)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        if (_lastBackupEntry != null)
+                            _logs.Remove(_lastBackupEntry);
+                        _log.Info($"Backup concluído às {DateTime.Now:HH:mm:ss}");
+                        _lastBackupEntry = _logs.LastOrDefault();
+                    });
+                }
             }
             catch (Exception ex)
             {
                 _log.Error($"Erro ao baixar dados manualmente: {ex.Message}");
+            }
+            finally
+            {
+                _manualSyncRunning = false;
             }
         }
 
