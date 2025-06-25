@@ -73,7 +73,7 @@ namespace OrganizadorArquivosWPF
         {
             string exePath = Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory,
-                "win-x64",
+                "att",
                 "UpdateCompiller.exe");
 
             if (!File.Exists(exePath))

@@ -466,7 +466,7 @@ namespace OrganizadorArquivosWPF
         private async Task RunUpdateAsync()
         {
             var exePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
-                                       "win-x64",
+                                       "att",
                                        "UpdateCompiller.exe");
             if (!File.Exists(exePath))
             {
