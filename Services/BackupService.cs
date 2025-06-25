@@ -1,5 +1,4 @@
-// BackupService.cs — .NET 8.0 • Envio de Backup para SharePoint via Microsoft Graph
-// Substitui completamente o uso de Dropbox
+// BackupService.cs — .NET 8.0 • Envio de Backup em pasta para SharePoint via Microsoft Graph
 
 using Azure.Identity;
 using Microsoft.Graph;
@@ -7,10 +6,9 @@ using Microsoft.Graph.Models;
 using OrganizadorArquivosWPF.Models;
 using System.Collections.Generic;
 using System.IO;
-using System;
-using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
+using System;
 
 namespace OrganizadorArquivosWPF.Services;
 
@@ -98,23 +96,43 @@ public class BackupService
             return;
         }
 
-        string nomeZip = Path.GetFileName(Path.GetFullPath(pasta).TrimEnd(Path.DirectorySeparatorChar)) + ".zip";
-        string zipLocal = Path.Combine(Path.GetTempPath(), nomeZip);
-
         try
         {
-            if (File.Exists(zipLocal)) File.Delete(zipLocal);
-
-            ZipFile.CreateFromDirectory(pasta, zipLocal, CompressionLevel.Optimal, false);
-
             var driveId = await ObterDriveIdAsync();
-            using var fs = File.OpenRead(zipLocal);
 
-            await _graph.Drives[driveId]
-                .Root
-                .ItemWithPath(nomeZip)
-                .Content
-                .PutAsync(fs);
+            // Cria pasta no SharePoint com nome da OS
+            var pastaItem = new DriveItem
+            {
+                Name = numOs,
+                Folder = new Folder(),
+                AdditionalData = new Dictionary<string, object>
+                {
+                    { "@microsoft.graph.conflictBehavior", "rename" }
+                }
+            };
+
+            var createdFolder = await _graph.Drives[driveId].Items["root"].Children.PostAsync(pastaItem);
+            string folderId = createdFolder!.Id;
+
+            // Envia arquivos
+            foreach (var file in Directory.GetFiles(pasta))
+            {
+                try
+                {
+                    using var fs = File.OpenRead(file);
+                    string fileName = Path.GetFileName(file);
+
+                    await _graph.Drives[driveId]
+                        .Items[folderId]
+                        .ItemWithPath(fileName)
+                        .Content
+                        .PutAsync(fs);
+                }
+                catch (Exception ex)
+                {
+                    _log.Warning($"Erro ao enviar '{file}': {ex.Message}");
+                }
+            }
 
             enviados.Add(numOs);
             SalvarHistorico(BackupHistoryFile, enviados);
@@ -122,10 +140,6 @@ public class BackupService
         catch (Exception ex)
         {
             _log.Error($"Falha ao enviar backup: {ex.Message}");
-        }
-        finally
-        {
-            try { if (File.Exists(zipLocal)) File.Delete(zipLocal); } catch { }
         }
     }
 
