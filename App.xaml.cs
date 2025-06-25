@@ -51,7 +51,7 @@ namespace OrganizadorArquivosWPF
             bool? wantsUpdate = updatePrompt.ShowDialog();
             if (wantsUpdate == true && updatePrompt.ShouldUpdate)
             {
-                RunUpdaterBat();
+                RunUpdaterExe();
                 Shutdown();
                 return;
             }
@@ -69,26 +69,26 @@ namespace OrganizadorArquivosWPF
         }
 
 
-        private void RunUpdaterBat()
+        private void RunUpdaterExe()
         {
-            string batPath = Path.Combine(
+            string exePath = Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory,
                 "win-x64",
-                "AtualizadorSilencioso.bat");
+                "UpdateCompiller.exe");
 
-            if (!File.Exists(batPath))
+            if (!File.Exists(exePath))
             {
                 MessageBox.Show(
-                    $"Arquivo de atualização não encontrado:\n{batPath}",
+                    $"Arquivo de atualização não encontrado:\n{exePath}",
                     "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
             Process.Start(new ProcessStartInfo
             {
-                FileName = batPath,
+                FileName = exePath,
                 UseShellExecute = true,
-                WorkingDirectory = Path.GetDirectoryName(batPath)
+                WorkingDirectory = Path.GetDirectoryName(exePath)
             });
         }
 
