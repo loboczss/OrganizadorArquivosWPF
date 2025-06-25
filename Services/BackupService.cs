@@ -4,6 +4,7 @@ using Azure.Identity;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
 using OrganizadorArquivosWPF.Models;
+using Microsoft.Graph.Drives.Item.Items.Item.CreateUploadSession;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -82,6 +83,47 @@ public class BackupService
         return _driveId;
     }
 
+    private async Task UploadFileAsync(string driveId, string folderId, string file)
+    {
+        const int SmallFileLimit = 4 * 1024 * 1024; // 4 MB
+        using var fs = File.OpenRead(file);
+        string fileName = Path.GetFileName(file);
+
+        if (fs.Length <= SmallFileLimit)
+        {
+            await _graph.Drives[driveId]
+                .Items[folderId]
+                .ItemWithPath(fileName)
+                .Content
+                .PutAsync(fs);
+            return;
+        }
+
+        // 👇 Definindo o corpo da requisição de upload session
+        var uploadBody = new CreateUploadSessionPostRequestBody
+        {
+            Item = new DriveItemUploadableProperties
+            {
+                Name = fileName,
+                AdditionalData = new Dictionary<string, object>
+            {
+                { "@microsoft.graph.conflictBehavior", "rename" }
+            }
+            }
+        };
+
+        // 👇 Corrigido: PostAsync agora exige esse body como argumento obrigatório
+        var uploadSession = await _graph.Drives[driveId]
+            .Items[folderId]
+            .ItemWithPath(fileName)
+            .CreateUploadSession
+            .PostAsync(uploadBody);
+
+        var uploadTask = new LargeFileUploadTask<DriveItem>(uploadSession, fs);
+        await uploadTask.UploadAsync();
+    }
+
+
     public async Task EnviarBackupAsync(string pasta, string? numOs = null)
     {
         if (string.IsNullOrWhiteSpace(pasta) || !Directory.Exists(pasta)) return;
@@ -119,14 +161,7 @@ public class BackupService
             {
                 try
                 {
-                    using var fs = File.OpenRead(file);
-                    string fileName = Path.GetFileName(file);
-
-                    await _graph.Drives[driveId]
-                        .Items[folderId]
-                        .ItemWithPath(fileName)
-                        .Content
-                        .PutAsync(fs);
+                    await UploadFileAsync(driveId, folderId, file);
                 }
                 catch (Exception ex)
                 {
