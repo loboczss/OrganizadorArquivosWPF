@@ -1,3 +1,11 @@
+// ManutencoesService.cs — WPF | C# 7.3 | .NET Framework 4.x
+// ONE Engenharia • Revisão: 25/06/2025 • VERSÃO COM GRAPH E ERROS CS0119 CORRIGIDOS
+
+using Azure.Identity;
+using Microsoft.Graph;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using OrganizadorArquivosWPF.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,37 +14,31 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
-using Dropbox.Api;
-using Dropbox.Api.Files;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using OrganizadorArquivosWPF.Models;
 
 namespace OrganizadorArquivosWPF.Services
 {
     public class ManutencoesService
     {
-        // === CREDENCIAIS =====================================================
-        private const string AppKey = "523wx0kknv1xj4h";
-        private const string AppSecret = "mcw1pgyfnx3hqbh";
-        private const string RefreshToken = "7-G0mKVNMRQAAAAAAAAAASvMELHHomwEkmVR24HK-XLEFvNMpNUp7Py0hxUnjic_";
-        private const string DropboxFolder = ""; // Pasta raiz
-        // =====================================================================
+        private const string TenantId = "3b08e64e-b3be-402b-bb26-1fa4f91cf61f";
+        private const string ClientId = "3cffac6a-f9d9-42d1-9065-4054fcd40163";
+        private const string ClientSecret = "JFd8Q~hHgTYYo0P0EjAM8mpe3xm3.5vTfCHRFc.T";
+
+        private const string SPDomain = "oneengenharia.sharepoint.com";
+        private const string SPSitePath = "/sites/OneEngenharia";
+        private const string DocumentLibraryName = "ArquivosJSON";
 
         private static readonly string OfflinePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "OneEngRenamer",
             "manutencoes.json");
 
-        private readonly string[] _padroesArquivo =
-        {
-            "Manutencao_AC2023",
-            "Manutencao_AC2024",
-            "Manutencao_AC2025",
-            "Manutencao_MT"
-
+        private readonly string[] _padroesArquivo = {
+            "Manutencao_AC2023", "Manutencao_AC2024",
+            "Manutencao_AC2025", "Manutencao_MT"
         };
 
+        private readonly GraphServiceClient _graph;
+        private string _driveId;
         private JArray _dados = new JArray();
         private List<ClientRecord> _records = new List<ClientRecord>();
         private Timer _timer;
@@ -49,20 +51,19 @@ namespace OrganizadorArquivosWPF.Services
         public IReadOnlyList<ClientRecord> Records => _records;
         public static string CacheFilePath => OfflinePath;
 
+        public ManutencoesService()
+        {
+            var scopes = new[] { "https://graph.microsoft.com/.default" };
+            var credential = new ClientSecretCredential(TenantId, ClientId, ClientSecret);
+            _graph = new GraphServiceClient(credential, scopes);
+        }
+
         public static DateTime? GetCacheTimestamp()
         {
             try { return File.Exists(OfflinePath) ? File.GetLastWriteTime(OfflinePath) : (DateTime?)null; }
             catch { return null; }
         }
 
-        // === TOKEN DINÂMICO ==================================================
-        private async Task<string> ObterAccessTokenAsync()
-        {
-            var tokenService = new GerarTokenService(AppKey, AppSecret, RefreshToken);
-            return await tokenService.ObterAccessTokenAsync();
-        }
-
-        // ======================  MÉTODO PRINCIPAL  ===========================
         public async Task<JArray> ObterDadosAsync(IProgress<int> progress = null)
         {
             progress?.Report(0);
@@ -75,7 +76,7 @@ namespace OrganizadorArquivosWPF.Services
                     var arquivos = await BaixarUltimosArquivosManutencaoAsync(progress);
 
                     if (arquivos.Count == 0)
-                        throw new Exception("⚠️ Nenhum dos 4 arquivos foi encontrado.");
+                        throw new Exception("⚠️ Nenhum dos 4 arquivos foi encontrado no SharePoint.");
 
                     _dados = CombinarArquivosJson(arquivos);
 
@@ -90,7 +91,7 @@ namespace OrganizadorArquivosWPF.Services
                 }
                 catch (Exception ex)
                 {
-                    _log.Warning("Tentando usar o Dados local…");
+                    _log.Warning($"Falha ao baixar do SharePoint ({ex.Message}). Tentando cache local…");
                 }
             }
 
@@ -102,12 +103,12 @@ namespace OrganizadorArquivosWPF.Services
                         ? JArray.Parse(File.ReadAllText(OfflinePath, Encoding.UTF8))
                         : new JArray();
 
-                    _log.Info($"Dados carregado: {_dados.Count} registros.");
+                    _log.Info($"Dados carregados do cache: {_dados.Count} registros.");
                     progress?.Report(100);
                 }
                 catch (Exception ex)
                 {
-                    _log.Error($"Falha ao ler Dados: {ex.Message}");
+                    _log.Error($"Falha ao ler cache: {ex.Message}");
                     _dados = new JArray();
                     progress?.Report(100);
                 }
@@ -118,13 +119,12 @@ namespace OrganizadorArquivosWPF.Services
             return _dados;
         }
 
-        // =====================  DOWNLOAD DROPBOX  ============================
         private async Task<Dictionary<string, string>> BaixarUltimosArquivosManutencaoAsync(
             IProgress<int> progress, int maxTentativas = 3)
         {
             for (int tentativa = 1; tentativa <= maxTentativas; tentativa++)
             {
-                try { return await BaixarArquivosDropboxInternoAsync(progress); }
+                try { return await BaixarArquivosSharePointInternoAsync(progress); }
                 catch (Exception ex) when (tentativa < maxTentativas)
                 {
                     _log.Warning($"Tentativa {tentativa} falhou ({ex.Message}). Retentando…");
@@ -134,72 +134,76 @@ namespace OrganizadorArquivosWPF.Services
             return new Dictionary<string, string>();
         }
 
-        private async Task<Dictionary<string, string>> BaixarArquivosDropboxInternoAsync(IProgress<int> progress)
+        private async Task<string> ObterDriveIdAsync()
         {
-            string accessToken = await ObterAccessTokenAsync();
-            if (string.IsNullOrEmpty(accessToken))
-                throw new Exception("❌ Falha ao gerar Access Token.");
+            if (!string.IsNullOrEmpty(_driveId)) return _driveId;
 
-            using (var dbx = new DropboxClient(accessToken))
-            {
-                ListFolderResult page;
-                try { page = await dbx.Files.ListFolderAsync(DropboxFolder); }
-                catch (Exception ex) { throw new Exception($"Falha ao listar pasta: {ex.Message}", ex); }
+            var site = await _graph.Sites[$"{SPDomain}:/sites{SPSitePath}"].GetAsync();
+            var drives = await _graph.Sites[site.Id].Drives.GetAsync();
+            var drive = drives.Value.FirstOrDefault(d => d.Name == DocumentLibraryName);
 
-                var jsonFiles = page.Entries
-                    .Where(e => e.IsFile && e.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-                    .Cast<FileMetadata>()
-                    .ToList();
+            if (drive == null)
+                throw new Exception($"Biblioteca '{DocumentLibraryName}' não encontrada.");
 
-                if (!jsonFiles.Any())
-                    throw new FileNotFoundException("Nenhum .json encontrado no Dropbox.");
-
-                var resultados = new Dictionary<string, string>();
-                int totalEtapas = _padroesArquivo.Length;
-                int concluidos = 0;
-
-                foreach (string padrao in _padroesArquivo)
-                {
-                    var arquivosPadrao = jsonFiles
-                        .Where(f => f.Name.IndexOf(padrao, StringComparison.OrdinalIgnoreCase) >= 0)
-                        .OrderByDescending(f => f.ServerModified)
-                        .ToList();
-
-                    if (!arquivosPadrao.Any())
-                    {
-                        _log.Warning($"Não encontrou arquivo para '{padrao}'.");
-                        concluidos++;
-                        progress?.Report(concluidos * 100 / totalEtapas);
-                        continue;
-                    }
-
-                    var meta = arquivosPadrao.First();
-
-                    try
-                    {
-                        using (var resp = await dbx.Files.DownloadAsync(meta.PathLower))
-                        {
-                            resultados[padrao] = await resp.GetContentAsStringAsync();
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _log.Error($"Falha ao baixar '{meta.Name}': {ex.Message}");
-                    }
-                    finally
-                    {
-                        concluidos++;
-                        progress?.Report(concluidos * 100 / totalEtapas);
-                    }
-                }
-
-                // Garante 100 % mesmo se faltou arquivo
-                progress?.Report(100);
-                return resultados;
-            }
+            _driveId = drive.Id;
+            return _driveId;
         }
 
-        // ======================  MERGE DE ARQUIVOS  ===========================
+        private async Task<Dictionary<string, string>> BaixarArquivosSharePointInternoAsync(IProgress<int> progress)
+        {
+            string driveId = await ObterDriveIdAsync();
+
+            var page = await _graph.Drives[driveId].Root.Children.GetAsync();
+
+            var jsonFiles = page.Value
+                .Where(it => it.File != null && it.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (!jsonFiles.Any())
+                throw new FileNotFoundException("Nenhum .json encontrado na biblioteca.");
+
+            var resultados = new Dictionary<string, string>();
+            int totalEtapas = _padroesArquivo.Length;
+            int concluidos = 0;
+
+            foreach (string padrao in _padroesArquivo)
+            {
+                var arquivosPadrao = jsonFiles
+                    .Where(f => f.Name.IndexOf(padrao, StringComparison.OrdinalIgnoreCase) >= 0)
+                    .OrderByDescending(f => f.LastModifiedDateTime)
+                    .ToList();
+
+                if (!arquivosPadrao.Any())
+                {
+                    _log.Warning($"Não encontrou arquivo para '{padrao}'.");
+                    concluidos++;
+                    progress?.Report(concluidos * 100 / totalEtapas);
+                    continue;
+                }
+
+                var meta = arquivosPadrao.First();
+
+                try
+                {
+                    using var stream = await _graph.Drives[driveId].Items[meta.Id].Content.GetAsync();
+                    using var reader = new StreamReader(stream);
+                    resultados[padrao] = await reader.ReadToEndAsync();
+                }
+                catch (Exception ex)
+                {
+                    _log.Error($"Falha ao baixar '{meta.Name}': {ex.Message}");
+                }
+                finally
+                {
+                    concluidos++;
+                    progress?.Report(concluidos * 100 / totalEtapas);
+                }
+            }
+
+            progress?.Report(100);
+            return resultados;
+        }
+
         private static JArray CombinarArquivosJson(Dictionary<string, string> arquivos)
         {
             var combinado = new JArray();
@@ -213,10 +217,20 @@ namespace OrganizadorArquivosWPF.Services
 
                     var token = JToken.Parse(conteudo);
 
-                    JArray arr =
-                        token.Type == JTokenType.Array
-                            ? (JArray)token
-                            : token.Children<JProperty>().FirstOrDefault()?.Value as JArray;
+                    JArray arr;
+
+                    if (token is JArray array)
+                    {
+                        arr = array;
+                    }
+                    else if (token is JObject obj)
+                    {
+                        arr = obj.Properties().FirstOrDefault()?.Value as JArray;
+                    }
+                    else
+                    {
+                        arr = null;
+                    }
 
                     if (arr == null || arr.Count == 0)
                     {
@@ -236,10 +250,10 @@ namespace OrganizadorArquivosWPF.Services
                     _log.Error($"Falha ao processar '{kv.Key}': {ex.Message}");
                 }
             }
+
             return combinado;
         }
 
-        // ======================  PARSE P/ OBJETO  =============================
         public static List<ClientRecord> ParseClientRecords(JArray array)
         {
             var list = new List<ClientRecord>();
@@ -248,8 +262,7 @@ namespace OrganizadorArquivosWPF.Services
             foreach (JObject obj in array.OfType<JObject>())
             {
                 string numos = obj.Value<string>("NUMOS") ?? string.Empty;
-                string uf = obj.Value<string>("UF") ??
-                            (numos.Length >= 2 ? numos.Substring(0, 2).ToUpperInvariant() : string.Empty);
+                string uf = obj.Value<string>("UF") ?? (numos.Length >= 2 ? numos.Substring(0, 2).ToUpperInvariant() : string.Empty);
 
                 list.Add(new ClientRecord
                 {
@@ -267,6 +280,7 @@ namespace OrganizadorArquivosWPF.Services
                     NomeArquivoBase = string.Empty
                 });
             }
+
             return list;
         }
 
@@ -291,7 +305,6 @@ namespace OrganizadorArquivosWPF.Services
             return new List<ClientRecord>(_records);
         }
 
-        // ======================  UTILIDADES  ==================================
         private static bool TemInternet()
         {
             try
@@ -312,7 +325,6 @@ namespace OrganizadorArquivosWPF.Services
             }
         }
 
-        // ===================  ATUALIZAÇÃO AUTOMÁTICA  =========================
         public void StartAutoUpdate(TimeSpan interval, IProgress<int> p = null)
         {
             if (_timer != null) return;
@@ -351,14 +363,6 @@ namespace OrganizadorArquivosWPF.Services
             _executandoAtualizacao = false;
         }
 
-        /// <summary>
-        /// Libera a memória utilizada pelos dados baixados.
-        /// </summary>
-        public void ClearData()
-        {
-            _dados = null;
-        }
-
+        public void ClearData() => _dados = null;
     }
 }
-
