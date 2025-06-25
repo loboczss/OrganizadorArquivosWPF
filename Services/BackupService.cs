@@ -30,6 +30,7 @@ public class BackupService
 
     private readonly GraphServiceClient _graph;
     private readonly LoggerService _log = LoggerService.Instance;
+    private readonly HashSet<string> _skipLogged = new(StringComparer.OrdinalIgnoreCase);
     private string? _driveId;
 
     public BackupService()
@@ -134,7 +135,8 @@ public class BackupService
         var enviados = CarregarHistorico(BackupHistoryFile);
         if (enviados.Contains(numOs))
         {
-            _log.Info($"Backup já enviado para a O.S {numOs}. Pulando envio.");
+            if (_skipLogged.Add(numOs))
+                _log.Info($"Backup já enviado para a O.S {numOs}. Pulando envio.");
             return;
         }
 
