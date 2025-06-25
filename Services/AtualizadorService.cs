@@ -20,10 +20,23 @@ namespace OrganizadorArquivosWPF.Services
         {
             // 1) Versão local
             Version localVer = new Version(0, 0, 0, 0);
+            // A partir da versão com .NET 8 self-contained o executável é
+            // apenas um host nativo e a DLL contém os metadados reais.
+            var dllPath = Path.Combine(InstallDir, "OrganizadorArquivosWPF.dll");
             var exePath = Path.Combine(InstallDir, "OrganizadorArquivosWPF.exe");
-            if (File.Exists(exePath))
+
+            string asmPath = File.Exists(dllPath) ? dllPath : exePath;
+
+            if (File.Exists(asmPath))
             {
-                localVer = AssemblyName.GetAssemblyName(exePath).Version;
+                try
+                {
+                    localVer = AssemblyName.GetAssemblyName(asmPath).Version;
+                }
+                catch (BadImageFormatException)
+                {
+                    // Executável não possui metadados (ex: host nativo). Mantém versão padrão.
+                }
             }
 
             // 2) Versão remota
