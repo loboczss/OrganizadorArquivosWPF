@@ -339,9 +339,7 @@ namespace OrganizadorArquivosWPF.Services
 
                 try
                 {
-                    _log.Info("🔄 Auto-update iniciado…");
                     await ObterDadosAsync(_timerProgress);
-                    _log.Info("✅ Auto-update concluído.");
                 }
                 catch (Exception ex)
                 {
