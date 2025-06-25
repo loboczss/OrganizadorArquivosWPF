@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Microsoft.Win32;
-using Serilog.Formatting.Display;
 
 namespace OrganizadorArquivosWPF.Services
 {
