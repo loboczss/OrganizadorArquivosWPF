@@ -465,21 +465,21 @@ namespace OrganizadorArquivosWPF
 
         private async Task RunUpdateAsync()
         {
-            var batPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
+            var exePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
                                        "win-x64",
-                                       "AtualizadorSilencioso.bat");
-            if (!File.Exists(batPath))
+                                       "UpdateCompiller.exe");
+            if (!File.Exists(exePath))
             {
-                System.Windows.MessageBox.Show($"Arquivo de atualização não encontrado:\n{batPath}",
+                System.Windows.MessageBox.Show($"Arquivo de atualização não encontrado:\n{exePath}",
                                 "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
             Process.Start(new ProcessStartInfo
             {
-                FileName = batPath,
+                FileName = exePath,
                 UseShellExecute = true,
-                WorkingDirectory = Path.GetDirectoryName(batPath)
+                WorkingDirectory = Path.GetDirectoryName(exePath)
             });
 
             await Task.Delay(500);
