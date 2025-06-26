@@ -76,7 +76,11 @@ namespace OrganizadorArquivosWPF.Services
         private async Task BaixarCsvSharePointAsync()
         {
             string driveId = await ObterDriveIdAsync();
-            var page = await _graph.Drives[driveId].Items["root"].Children.GetAsync();
+            var page = await _graph
+                .Drives[driveId]
+                .Items["root"]
+                .Children
+                .GetAsync();
             var meta = page.Value.FirstOrDefault(it => string.Equals(it.Name, CsvFileName, StringComparison.OrdinalIgnoreCase))
                 ?? throw new FileNotFoundException($"Arquivo '{CsvFileName}' não encontrado no SharePoint.");
 

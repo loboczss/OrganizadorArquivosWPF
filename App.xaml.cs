@@ -82,7 +82,7 @@ namespace OrganizadorArquivosWPF
                 "att",
                 "UpdateCompiller.exe");
 
-            if (!File.Exists(exePath))
+            if (!System.IO.File.Exists(exePath))
             {
                 MessageBox.Show(
                     $"Arquivo de atualização não encontrado:\n{exePath}",
@@ -110,7 +110,7 @@ namespace OrganizadorArquivosWPF
 
                 string startupFolder = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
                 string shortcutPath = Path.Combine(startupFolder, "OrganizadorArquivosWPF.lnk");
-                if (!File.Exists(shortcutPath))
+                if (!System.IO.File.Exists(shortcutPath))
                 {
                     var shell = new WshShell();
                     IWshShortcut shortcut = (IWshShortcut)shell.CreateShortcut(shortcutPath);
