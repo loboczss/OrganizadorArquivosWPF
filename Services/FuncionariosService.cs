@@ -2,6 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Linq;
+using System.Threading.Tasks;
+using Azure.Identity;
+using Microsoft.Graph;
 
 namespace OrganizadorArquivosWPF.Services
 {
@@ -13,9 +17,28 @@ namespace OrganizadorArquivosWPF.Services
 
     public class FuncionariosService
     {
+        private const string TenantId = "3b08e64e-b3be-402b-bb26-1fa4f91cf61f";
+        private const string ClientId = "3cffac6a-f9d9-42d1-9065-4054fcd40163";
+        private const string ClientSecret = "JFd8Q~hHgTYYo0P0EjAM8mpe3xm3.5vTfCHRFc.T";
+
+        private const string SPDomain = "oneengenharia.sharepoint.com";
+        private const string SPSitePath = "OneEngenharia";
+        private const string DocumentLibraryName = "ArquivosJSON";
+        private const string CsvFileName = "funcionarios.csv";
+
+        private readonly GraphServiceClient _graph;
+        private string _driveId;
+
         private readonly string _csvPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "OneEngRenamer","OrganizadorArquivosWPF","funcionarios.csv");
+
+        public FuncionariosService()
+        {
+            var scopes = new[] { "https://graph.microsoft.com/.default" };
+            var credential = new ClientSecretCredential(TenantId, ClientId, ClientSecret);
+            _graph = new GraphServiceClient(credential, scopes);
+        }
 
 
         /// <summary>
@@ -37,6 +60,49 @@ namespace OrganizadorArquivosWPF.Services
             }
         }
 
+        private async Task<string> ObterDriveIdAsync()
+        {
+            if (!string.IsNullOrEmpty(_driveId)) return _driveId;
+
+            var site = await _graph.Sites[$"{SPDomain}:/sites/{SPSitePath}"].GetAsync();
+            var drives = await _graph.Sites[site.Id].Drives.GetAsync();
+            var drive = drives.Value.FirstOrDefault(d => d.Name == DocumentLibraryName)
+                ?? throw new Exception($"Biblioteca '{DocumentLibraryName}' não encontrada.");
+
+            _driveId = drive.Id;
+            return _driveId;
+        }
+
+        private async Task BaixarCsvSharePointAsync()
+        {
+            string driveId = await ObterDriveIdAsync();
+            var page = await _graph.Drives[driveId].Items["root"].Children.GetAsync();
+            var meta = page.Value.FirstOrDefault(it => string.Equals(it.Name, CsvFileName, StringComparison.OrdinalIgnoreCase))
+                ?? throw new FileNotFoundException($"Arquivo '{CsvFileName}' não encontrado no SharePoint.");
+
+            using var stream = await _graph.Drives[driveId].Items[meta.Id].Content.GetAsync();
+            Directory.CreateDirectory(Path.GetDirectoryName(_csvPath));
+            using var fs = File.Create(_csvPath);
+            await stream.CopyToAsync(fs);
+        }
+
+        private void GarantirArquivoLocal()
+        {
+            if (!File.Exists(_csvPath))
+            {
+                try
+                {
+                    BaixarCsvSharePointAsync().GetAwaiter().GetResult();
+                }
+                catch (Exception ex)
+                {
+                    throw new FileNotFoundException("Arquivo de funcionários não encontrado e não foi possível baixar do SharePoint.", ex);
+                }
+            }
+
+            ForcarArquivoOnline(_csvPath);
+        }
+
         /// <summary>
         /// Busca funcionário pela matrícula. Retorna null se não encontrar.
         /// </summary>
@@ -45,10 +111,7 @@ namespace OrganizadorArquivosWPF.Services
             if (string.IsNullOrWhiteSpace(matricula))
                 return null;
 
-            if (!File.Exists(_csvPath))
-                throw new FileNotFoundException("Arquivo de funcionários não encontrado!", _csvPath);
-
-            ForcarArquivoOnline(_csvPath); // Força sincronização
+            GarantirArquivoLocal();
 
             try
             {
@@ -89,10 +152,15 @@ namespace OrganizadorArquivosWPF.Services
         public List<Funcionario> ListarTodos()
         {
             var lista = new List<Funcionario>();
-            if (!File.Exists(_csvPath))
-                return lista;
 
-            ForcarArquivoOnline(_csvPath); // Força sincronização
+            try
+            {
+                GarantirArquivoLocal();
+            }
+            catch
+            {
+                return lista;
+            }
 
             try
             {
