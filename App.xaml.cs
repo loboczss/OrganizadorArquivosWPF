@@ -10,6 +10,7 @@ using IWshRuntimeLibrary;
 using OrganizadorArquivosWPF.Services;
 using OrganizadorArquivosWPF.Models;
 using OrganizadorArquivosWPF.Views;
+using OrganizadorArquivosWPF.Helpers;
 
 namespace OrganizadorArquivosWPF
 {
@@ -49,6 +50,9 @@ namespace OrganizadorArquivosWPF
             splash.SetProgress(-1);
             var funcService = new FuncionariosService();
             await Task.Run(() => funcService.ListarTodos());
+
+            // Salva versão antes de seguir para o prompt de atualização
+            Versao.GravarVersaoEmTxt();
 
             splash.Close();
 
