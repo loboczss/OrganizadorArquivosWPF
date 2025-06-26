@@ -44,6 +44,11 @@ namespace OrganizadorArquivosWPF
             var progress = new Progress<int>(v => splash.SetProgress(v));
             await _tray.StartAsync(progress);
 
+            splash.SetStatus("Baixando planilha de funcionários...");
+            splash.SetProgress(-1);
+            var funcService = new FuncionariosService();
+            await Task.Run(() => funcService.ListarTodos());
+
             splash.Close();
 
             // Prompt de atualização
