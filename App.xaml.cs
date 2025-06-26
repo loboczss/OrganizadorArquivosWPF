@@ -108,7 +108,9 @@ namespace OrganizadorArquivosWPF
             {
                 var runKey = Registry.CurrentUser.OpenSubKey(
                     "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
-                var exe = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                var exe = Environment.ProcessPath ??
+                          System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ??
+                          System.Reflection.Assembly.GetExecutingAssembly().Location;
                 runKey?.SetValue("OrganizadorArquivosWPF", '"' + exe + '"');
                 runKey?.Close();
 
