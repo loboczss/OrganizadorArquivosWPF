@@ -91,7 +91,13 @@ namespace OrganizadorArquivosWPF.Services
             };
 
             var exitItem = new ToolStripMenuItem("Sair");
-            exitItem.Click += (s, e) => System.Windows.Application.Current.Shutdown();
+            exitItem.Click += (s, e) =>
+            {
+                var app = System.Windows.Application.Current;
+                if (app?.MainWindow is MainWindow wnd)
+                    wnd.AllowClose = true;
+                app?.Shutdown();
+            };
             menu.Items.Add(openItem);
             menu.Items.Add(downloadItem);
             menu.Items.Add(exitItem);

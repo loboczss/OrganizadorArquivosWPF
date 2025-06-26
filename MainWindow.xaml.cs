@@ -87,6 +87,7 @@ namespace OrganizadorArquivosWPF
         private LogEntry _lastBackupEntry;
         private bool _manualSyncRunning;
         private string _pastaOrigem;
+        public bool AllowClose { get; set; }
         #endregion
 
         /// <summary>
@@ -513,8 +514,11 @@ namespace OrganizadorArquivosWPF
 
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            e.Cancel = true;
-            Hide();
+            if (!AllowClose)
+            {
+                e.Cancel = true;
+                Hide();
+            }
         }
 
         protected override void OnStateChanged(EventArgs e)
@@ -535,7 +539,7 @@ namespace OrganizadorArquivosWPF
         }
 
         // -----------------------------------------------------------------------------
-        // 🔄 Evento disparado pelo ManutencoesService sempre que ele termina uma tentativajjjj
+        // 🔄 Evento disparado pelo ManutencoesService sempre que ele termina uma tentativa
         // -----------------------------------------------------------------------------
         private void Manutencoes_UpdateCompleted(DateTime time, bool fromInternet)
         {

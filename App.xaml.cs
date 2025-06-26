@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using Microsoft.Win32;
+using IWshRuntimeLibrary;
 using OrganizadorArquivosWPF.Services;
 using OrganizadorArquivosWPF.Models;
 using OrganizadorArquivosWPF.Views;
@@ -105,6 +106,18 @@ namespace OrganizadorArquivosWPF
                     "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
                 var exe = System.Reflection.Assembly.GetExecutingAssembly().Location;
                 runKey?.SetValue("OrganizadorArquivosWPF", '"' + exe + '"');
+                runKey?.Close();
+
+                string startupFolder = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+                string shortcutPath = Path.Combine(startupFolder, "OrganizadorArquivosWPF.lnk");
+                if (!File.Exists(shortcutPath))
+                {
+                    var shell = new WshShell();
+                    IWshShortcut shortcut = (IWshShortcut)shell.CreateShortcut(shortcutPath);
+                    shortcut.TargetPath = exe;
+                    shortcut.WorkingDirectory = Path.GetDirectoryName(exe);
+                    shortcut.Save();
+                }
             }
             catch { /* ignore registry errors */ }
         }
