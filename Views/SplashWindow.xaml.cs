@@ -12,6 +12,11 @@ namespace OrganizadorArquivosWPF.Views
             InitializeComponent();
         }
 
+        public void SetStatus(string text)
+        {
+            TxtStatus.Text = text;
+        }
+
         public void SetProgress(int value)
         {
             if (value < 0)
