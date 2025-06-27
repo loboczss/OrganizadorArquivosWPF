@@ -67,7 +67,21 @@ public class BackupService
         try
         {
             var dir = Path.GetFileName(pasta);
-            return dir?.Split('_')[0];
+            if (string.IsNullOrWhiteSpace(dir)) return null;
+
+            var parts = dir.Split('_');
+            if (parts.Length == 0) return null;
+
+            var os = parts[0];
+
+            if (os.Length > 2 && os.Substring(2).All(c => c == '0'))
+            {
+                var sigfi = parts.Length > 1 ? parts[1] : null;
+                if (!string.IsNullOrWhiteSpace(sigfi))
+                    return $"{sigfi}_instalacao";
+            }
+
+            return os;
         }
         catch { return null; }
     }
@@ -277,6 +291,9 @@ public class BackupService
             progress);
 
         if (enviarParaNuvem)
-            await EnviarBackupAsync(renamer.LastDestination, registro?.NumOS);
+        {
+            var nome = ExtrairOs(renamer.LastDestination);
+            await EnviarBackupAsync(renamer.LastDestination, nome);
+        }
     }
 }
