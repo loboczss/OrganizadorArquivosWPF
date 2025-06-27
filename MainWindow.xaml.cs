@@ -221,37 +221,46 @@ namespace OrganizadorArquivosWPF
             var osNum = osInput;
             var fullOS = uf + osNum;
 
-            _log.Info("Buscando na base de dados…");
+            bool manualMode = osNum.Length > 0 && osNum.All(c => c == '0');
+
+            _log.Info(manualMode ? "Modo manual ativado." : "Buscando na base de dados…");
 
             ClientRecord record;
-            try
+            if (!manualMode)
             {
-                record = await Task.Run(() =>
+                try
                 {
-                    int total = _cachedRecords.Count;
-                    for (int i = 0; i < total; i++)
+                    record = await Task.Run(() =>
                     {
-                        reporter.Report((int)((i + 1) * 100.0 / total));
-                        var r = _cachedRecords[i];
-                        if (r.NumOS.Equals(fullOS, StringComparison.OrdinalIgnoreCase))
-                            return r;
-                    }
-                    return null;
-                });
+                        int total = _cachedRecords.Count;
+                        for (int i = 0; i < total; i++)
+                        {
+                            reporter.Report((int)((i + 1) * 100.0 / total));
+                            var r = _cachedRecords[i];
+                            if (r.NumOS.Equals(fullOS, StringComparison.OrdinalIgnoreCase))
+                                return r;
+                        }
+                        return null;
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _log.Error($"Erro ao ler base de dados: {ex.Message}");
+                    System.Windows.MessageBox.Show($"Erro ao ler base de dados: {ex.Message}",
+                                    "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                    ToggleUIBusy(false);
+                    return;
+                }
             }
-            catch (Exception ex)
+            else
             {
-                _log.Error($"Erro ao ler base de dados: {ex.Message}");
-                System.Windows.MessageBox.Show($"Erro ao ler base de dados: {ex.Message}",
-                                "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-                ToggleUIBusy(false);
-                return;
+                record = null;
             }
 
             if (record == null)
             {
                 _log.Warning("OS não encontrada – solicitando dados manuais…");
-                record = await MostrarFallbackAsync(fullOS, uf);
+                record = await MostrarFallbackAsync(fullOS, uf, manualMode);
                 if (record == null)
                 {
                     ToggleUIBusy(false);
@@ -300,7 +309,7 @@ namespace OrganizadorArquivosWPF
             }
         }
 
-        private Task<ClientRecord> MostrarFallbackAsync(string fullOS, string uf)
+        private Task<ClientRecord> MostrarFallbackAsync(string fullOS, string uf, bool allowAnyId = false)
         {
             // Chamamos ShowDialog de forma síncrona, mas todo o trabalho de GetRouteList() 
             // (pesado) pode rodar em background antes de abrir a janela.
@@ -317,7 +326,7 @@ namespace OrganizadorArquivosWPF
                 // Precisamos chamar ShowDialog na thread de UI → Dispatcher.Invoke
                 Dispatcher.Invoke(() =>
                 {
-                    var fb = new FallbackWindow(fullOS, rotaList, uf, _cachedRecords) { Owner = this };
+                    var fb = new FallbackWindow(fullOS, rotaList, uf, _cachedRecords, allowAnyId) { Owner = this };
                     if (fb.ShowDialog() == true)
                     {
                         fallbackResult = new ClientRecord

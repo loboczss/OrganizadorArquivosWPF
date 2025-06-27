@@ -26,13 +26,20 @@ namespace OrganizadorArquivosWPF.Views
 
         // Conjunto de registros carregados em memória
         private readonly IList<ClientRecord> _records;
+        // Indica que o ID pode ser digitado livremente (sem busca)
+        private readonly bool _allowAnyId;
 
-        public FallbackWindow(string osFull, IEnumerable<string> rotas, string uf, IEnumerable<ClientRecord> records)
+        public FallbackWindow(string osFull,
+                              IEnumerable<string> rotas,
+                              string uf,
+                              IEnumerable<ClientRecord> records,
+                              bool allowAnyId = false)
         {
             InitializeComponent();
 
             OSFull = osFull;
             _ufPrefixo = uf.ToUpperInvariant();
+            _allowAnyId = allowAnyId;
             _records = records?.ToList() ?? new List<ClientRecord>();
 
             TxtOSFull.Text = osFull;
@@ -41,7 +48,8 @@ namespace OrganizadorArquivosWPF.Views
             foreach (var r in rotas.Distinct().OrderBy(x => x))
                 CmbRota.Items.Add(new ComboBoxItem { Content = r });
 
-            CmbRota.IsEnabled = false; // rota será preenchida automaticamente
+            // Quando em modo manual, a rota deve ser escolhida manualmente
+            CmbRota.IsEnabled = !allowAnyId;
 
             // Prefixa o campo IdSIGFI com a UF
             TxtIdSigfi.Text = _ufPrefixo;
@@ -49,19 +57,30 @@ namespace OrganizadorArquivosWPF.Views
 
             // Inicialmente nenhum cliente, valida botão OK
             ClienteEncontrado = null;
+            if (_allowAnyId)
+                LblCliente.Content = "Modo manual - cliente não verificado.";
             Validate();
 
             // Concluiu a inicialização
             _carregando = false;
         }
 
-        // Habilita OK apenas quando ID SIGFI estiver completo e cliente existir
+        // Habilita OK apenas quando ID SIGFI estiver completo.
+        // Em modo normal exige cliente encontrado; em modo manual exige rota selecionada.
         private void Validate()
         {
-            BtnOk.IsEnabled =
+            bool idValido =
                 !string.IsNullOrWhiteSpace(TxtIdSigfi.Text) &&
-                TxtIdSigfi.Text.Length > _ufPrefixo.Length &&
-                !string.IsNullOrEmpty(ClienteEncontrado);
+                TxtIdSigfi.Text.Length > _ufPrefixo.Length;
+
+            if (_allowAnyId)
+            {
+                BtnOk.IsEnabled = idValido && CmbRota.SelectedIndex > 0;
+            }
+            else
+            {
+                BtnOk.IsEnabled = idValido && !string.IsNullOrEmpty(ClienteEncontrado);
+            }
         }
 
         // Busca assincrona sem travar UI
@@ -128,7 +147,15 @@ namespace OrganizadorArquivosWPF.Views
         }
 
         private void CmbRota_Changed(object sender, SelectionChangedEventArgs e)
-            => Validate();
+        {
+            if (_allowAnyId)
+            {
+                var item = CmbRota.SelectedItem as ComboBoxItem;
+                Rota = item?.Content.ToString();
+            }
+
+            Validate();
+        }
 
         private async void TxtIdSigfi_TextChanged(object sender, TextChangedEventArgs e)
         {
@@ -145,7 +172,8 @@ namespace OrganizadorArquivosWPF.Views
                 ClienteEncontrado = null;
                 LblCliente.Content = "Digite o restante do ID SIGFI.";
                 Rota = string.Empty;
-                CmbRota.SelectedIndex = -1;
+                if (!_allowAnyId)
+                    CmbRota.SelectedIndex = -1;
                 Validate();
                 return;
             }
@@ -156,14 +184,24 @@ namespace OrganizadorArquivosWPF.Views
                 ClienteEncontrado = null;
                 LblCliente.Content = "ID SIGFI incompleto (mínimo 5 dígitos).";
                 Rota = string.Empty;
-                CmbRota.SelectedIndex = -1;
+                if (!_allowAnyId)
+                    CmbRota.SelectedIndex = -1;
                 Validate();
                 return;
             }
 
-            // Quando cumprido o mínimo, inicia busca assíncrona
-            Validate(); // enquanto busca, OK permanece desabilitado
-            await BuscarClientePorIdSigfiAsync(texto);
+            // Quando cumprido o mínimo, inicia busca assíncrona (modo normal)
+            if (_allowAnyId)
+            {
+                LblCliente.Content = "Modo manual - cliente não verificado.";
+                ClienteEncontrado = null;
+                Validate();
+            }
+            else
+            {
+                Validate(); // enquanto busca, OK permanece desabilitado
+                await BuscarClientePorIdSigfiAsync(texto);
+            }
         }
 
         private void Chk160_Checked(object sender, RoutedEventArgs e)
@@ -176,6 +214,11 @@ namespace OrganizadorArquivosWPF.Views
         {
             // Lê valores finais
             IdSigfi = TxtIdSigfi.Text.Trim();
+            if (_allowAnyId)
+            {
+                var item = CmbRota.SelectedItem as ComboBoxItem;
+                Rota = item?.Content.ToString();
+            }
             DialogResult = true;
         }
 
