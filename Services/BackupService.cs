@@ -124,6 +124,34 @@ public class BackupService
         await uploadTask.UploadAsync();
     }
 
+    private async Task UploadFileWithRetryAsync(
+        string driveId,
+        string folderId,
+        string file,
+        int maxAttempts = 3)
+    {
+        int attempt = 0;
+        while (true)
+        {
+            try
+            {
+                await UploadFileAsync(driveId, folderId, file);
+                return;
+            }
+            catch (Exception ex)
+            {
+                attempt++;
+                if (attempt >= maxAttempts)
+                    throw new IOException(
+                        $"Falha ao enviar '{file}' após {attempt} tentativas.", ex);
+
+                _log.Warning(
+                    $"Erro ao enviar '{file}' (tentativa {attempt}): {ex.Message}. Retentando...");
+                await Task.Delay(1000);
+            }
+        }
+    }
+
 
     public async Task EnviarBackupAsync(string pasta, string? numOs = null)
     {
@@ -159,20 +187,29 @@ public class BackupService
             string folderId = createdFolder!.Id;
 
             // Envia arquivos
+            bool allOk = true;
             foreach (var file in Directory.GetFiles(pasta))
             {
                 try
                 {
-                    await UploadFileAsync(driveId, folderId, file);
+                    await UploadFileWithRetryAsync(driveId, folderId, file);
                 }
                 catch (Exception ex)
                 {
-                    _log.Warning($"Erro ao enviar '{file}': {ex.Message}");
+                    allOk = false;
+                    _log.Error($"Erro ao enviar '{file}': {ex.Message}");
                 }
             }
 
-            enviados.Add(numOs);
-            SalvarHistorico(BackupHistoryFile, enviados);
+            if (allOk)
+            {
+                enviados.Add(numOs);
+                SalvarHistorico(BackupHistoryFile, enviados);
+            }
+            else
+            {
+                _log.Warning("Alguns arquivos falharam ao enviar. Tente novamente mais tarde.");
+            }
         }
         catch (Exception ex)
         {
