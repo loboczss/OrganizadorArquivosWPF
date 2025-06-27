@@ -49,7 +49,7 @@ namespace OrganizadorArquivosWPF.Views
                 CmbRota.Items.Add(new ComboBoxItem { Content = r });
 
             // Quando em modo manual, a rota deve ser escolhida manualmente
-            CmbRota.IsEnabled = !allowAnyId;
+            CmbRota.IsEnabled = allowAnyId;
 
             // Prefixa o campo IdSIGFI com a UF
             TxtIdSigfi.Text = _ufPrefixo;
