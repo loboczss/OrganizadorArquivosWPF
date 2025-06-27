@@ -3,6 +3,7 @@
 using Azure.Identity;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
+using System.IO.Compression;
 using OrganizadorArquivosWPF.Models;
 using Microsoft.Graph.Drives.Item.Items.Item.CreateUploadSession;
 using System.Collections.Generic;
@@ -69,6 +70,18 @@ public class BackupService
             return dir?.Split('_')[0];
         }
         catch { return null; }
+    }
+
+    private static string CriarZipTemporario(string pasta)
+    {
+        var nome = Path.GetFileName(pasta);
+        var tmp = Path.Combine(Path.GetTempPath(), nome + ".zip");
+
+        if (File.Exists(tmp))
+            File.Delete(tmp);
+
+        ZipFile.CreateFromDirectory(pasta, tmp, CompressionLevel.SmallestSize, false);
+        return tmp;
     }
 
     private async Task<string> ObterDriveIdAsync()
@@ -199,6 +212,24 @@ public class BackupService
                     allOk = false;
                     _log.Error($"Erro ao enviar '{file}': {ex.Message}");
                 }
+            }
+
+            // Envia zip de segurança
+            string? zipTmp = null;
+            try
+            {
+                zipTmp = CriarZipTemporario(pasta);
+                await UploadFileWithRetryAsync(driveId, folderId, zipTmp);
+            }
+            catch (Exception ex)
+            {
+                allOk = false;
+                _log.Error($"Erro ao enviar '{zipTmp ?? "zip"}': {ex.Message}");
+            }
+            finally
+            {
+                if (zipTmp != null && File.Exists(zipTmp))
+                    File.Delete(zipTmp);
             }
 
             if (allOk)
