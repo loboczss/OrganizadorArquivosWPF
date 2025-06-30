@@ -3,11 +3,10 @@ This application interacts with Microsoft Graph and requires Azure AD credential
 
 ## Configuration
 
-Credentials are read from environment variables. Set the following variables:
+Credentials are read from a JSON file located at
+`%LOCALAPPDATA%\OneEngRenamer\config.json`. Create this file with the
+following content:
 
-- `TENANT_ID` – Azure Active Directory tenant ID
-- `CLIENT_ID` – Application (client) ID
-- `CLIENT_SECRET` – Application secret
 
 OrganizadorArquivosWPF is a Windows Presentation Foundation (WPF) desktop application used by One Engenharia LTDA to organize engineering files. It automates tasks such as renaming, moving and backing up documents to cloud storage.
 
