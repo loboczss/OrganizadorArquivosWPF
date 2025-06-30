@@ -16,9 +16,9 @@ namespace OrganizadorArquivosWPF.Services
 
         static Config()
         {
-            TenantId = GetSetting("TENANT_ID");
-            ClientId = GetSetting("CLIENT_ID");
-            ClientSecret = GetSetting("CLIENT_SECRET");
+            TenantId = GetSetting("3b08e64e-b3be-402b-bb26-1fa4f91cf61f");
+            ClientId = GetSetting("3cffac6a-f9d9-42d1-9065-4054fcd40163");
+            ClientSecret = GetSetting("JFd8Q~hHgTYYo0P0EjAM8mpe3xm3.5vTfCHRFc.T");
         }
 
         private static string GetSetting(string key)

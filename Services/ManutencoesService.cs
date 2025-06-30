@@ -3,7 +3,6 @@
 
 using Azure.Identity;
 using Microsoft.Graph;
-using Microsoft.Graph.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OrganizadorArquivosWPF.Models;
