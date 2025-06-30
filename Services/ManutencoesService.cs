@@ -20,9 +20,6 @@ namespace OrganizadorArquivosWPF.Services
 {
     public class ManutencoesService
     {
-        private const string TenantId = "3b08e64e-b3be-402b-bb26-1fa4f91cf61f";
-        private const string ClientId = "3cffac6a-f9d9-42d1-9065-4054fcd40163";
-        private const string ClientSecret = "JFd8Q~hHgTYYo0P0EjAM8mpe3xm3.5vTfCHRFc.T";
 
         private const string SPDomain = "oneengenharia.sharepoint.com";
         private const string SPSitePath = "OneEngenharia";
@@ -55,7 +52,7 @@ namespace OrganizadorArquivosWPF.Services
         public ManutencoesService()
         {
             var scopes = new[] { "https://graph.microsoft.com/.default" };
-            var credential = new ClientSecretCredential(TenantId, ClientId, ClientSecret);
+            var credential = new ClientSecretCredential(Config.TenantId, Config.ClientId, Config.ClientSecret);
             _graph = new GraphServiceClient(credential, scopes);
             _log?.Info("ManutencoesService inicializado");
         }
