@@ -599,11 +599,12 @@ namespace OrganizadorArquivosWPF
                     {
                         if (!t.IsFaulted)
                         {
+                            var enviados = t.Result.Count(r => r.Verificado);
                             Dispatcher.Invoke(() =>
                             {
                                 if (_lastBackupEntry != null)
                                     _logs.Remove(_lastBackupEntry);
-                                _log.Info($"Backup concluído às {DateTime.Now:HH:mm:ss}");
+                                _log.Info($"Backup concluído ({enviados} arquivos) às {DateTime.Now:HH:mm:ss}");
                                 _lastBackupEntry = _logs.LastOrDefault();
                             });
                         }
@@ -634,7 +635,7 @@ namespace OrganizadorArquivosWPF
                 return;
 
             _manualSyncRunning = true;
-            Task backupTask = Task.CompletedTask;
+            Task<IReadOnlyList<FileUploadResult>> backupTask = Task.FromResult<IReadOnlyList<FileUploadResult>>(new List<FileUploadResult>());
 
             if (_backup != null && _renamer != null &&
                 !string.IsNullOrWhiteSpace(_renamer.LastDestination) &&
@@ -651,11 +652,12 @@ namespace OrganizadorArquivosWPF
 
                 if (backupTask.Status == TaskStatus.RanToCompletion)
                 {
+                    var enviados = backupTask.Result.Count(r => r.Verificado);
                     Dispatcher.Invoke(() =>
                     {
                         if (_lastBackupEntry != null)
                             _logs.Remove(_lastBackupEntry);
-                        _log.Info($"Backup concluído às {DateTime.Now:HH:mm:ss}");
+                        _log.Info($"Backup concluído ({enviados} arquivos) às {DateTime.Now:HH:mm:ss}");
                         _lastBackupEntry = _logs.LastOrDefault();
                     });
                 }

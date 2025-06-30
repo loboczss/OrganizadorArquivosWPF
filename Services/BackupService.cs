@@ -85,7 +85,15 @@ public class BackupService
         return _driveId;
     }
 
-    private async Task UploadFileAsync(string driveId, string folderId, string file)
+    private static string CalcularSha1(string arquivo)
+    {
+        using var sha1 = System.Security.Cryptography.SHA1.Create();
+        using var fs = File.OpenRead(arquivo);
+        var hash = sha1.ComputeHash(fs);
+        return Convert.ToBase64String(hash);
+    }
+
+    private async Task<DriveItem?> UploadFileAsync(string driveId, string folderId, string file)
     {
         const int SmallFileLimit = 4 * 1024 * 1024; // 4 MB
         using var fs = File.OpenRead(file);
@@ -93,12 +101,11 @@ public class BackupService
 
         if (fs.Length <= SmallFileLimit)
         {
-            await _graph.Drives[driveId]
+            return await _graph.Drives[driveId]
                 .Items[folderId]
                 .ItemWithPath(fileName)
                 .Content
                 .PutAsync(fs);
-            return;
         }
 
         // 👇 Definindo o corpo da requisição de upload session
@@ -122,10 +129,11 @@ public class BackupService
             .PostAsync(uploadBody);
 
         var uploadTask = new LargeFileUploadTask<DriveItem>(uploadSession, fs);
-        await uploadTask.UploadAsync();
+        var result = await uploadTask.UploadAsync();
+        return result.ItemResponse;
     }
 
-    private async Task UploadFileWithRetryAsync(
+    private async Task<DriveItem?> UploadFileWithRetryAsync(
         string driveId,
         string folderId,
         string file,
@@ -136,8 +144,7 @@ public class BackupService
         {
             try
             {
-                await UploadFileAsync(driveId, folderId, file);
-                return;
+                return await UploadFileAsync(driveId, folderId, file);
             }
             catch (Exception ex)
             {
@@ -153,13 +160,34 @@ public class BackupService
         }
     }
 
-
-    public async Task EnviarBackupAsync(string pasta, string? numOs = null)
+    private async Task<FileUploadResult> UploadAndVerifyAsync(
+        string driveId,
+        string folderId,
+        string file)
     {
-        if (string.IsNullOrWhiteSpace(pasta) || !Directory.Exists(pasta)) return;
+        var item = await UploadFileWithRetryAsync(driveId, folderId, file);
+        var hashLocal = CalcularSha1(file);
+        bool ok = false;
+        if (item != null)
+        {
+            var remoto = await _graph.Drives[driveId]
+                .Items[item.Id]
+                .GetAsync(r => r.QueryParameters.Select = new[] { "file" });
+            var hashRemoto = remoto.File?.Hashes?.Sha1Hash;
+            ok = hashRemoto != null &&
+                 string.Equals(hashRemoto, hashLocal, StringComparison.OrdinalIgnoreCase);
+        }
+        return new FileUploadResult(Path.GetFileName(file), ok, hashLocal);
+    }
+
+
+    public async Task<IReadOnlyList<FileUploadResult>> EnviarBackupAsync(string pasta, string? numOs = null)
+    {
+        var resultados = new List<FileUploadResult>();
+        if (string.IsNullOrWhiteSpace(pasta) || !Directory.Exists(pasta)) return resultados;
 
         numOs ??= ExtrairOs(pasta);
-        if (string.IsNullOrWhiteSpace(numOs)) return;
+        if (string.IsNullOrWhiteSpace(numOs)) return resultados;
 
         try
         {
@@ -198,23 +226,39 @@ public class BackupService
                 .Where(it => it.File != null)
                 .Select(it => it.Name), StringComparer.OrdinalIgnoreCase);
 
-            // Envia arquivos
+            // Envia arquivos em paralelo limitando concorrencia
             bool allOk = true;
+            var sem = new SemaphoreSlim(4);
+            var tarefas = new List<Task<FileUploadResult>>();
             foreach (var file in Directory.GetFiles(pasta))
             {
-                try
-                {
-                    if (enviados.Contains(Path.GetFileName(file)))
-                        continue;
+                if (enviados.Contains(Path.GetFileName(file)))
+                    continue;
 
-                    await UploadFileWithRetryAsync(driveId, folderId, file);
-                }
-                catch (Exception ex)
+                await sem.WaitAsync();
+                tarefas.Add(Task.Run(async () =>
                 {
-                    allOk = false;
-                    _log.Error($"Erro ao enviar '{file}': {ex.Message}");
-                }
+                    try
+                    {
+                        var r = await UploadAndVerifyAsync(driveId, folderId, file);
+                        return r;
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Error($"Erro ao enviar '{file}': {ex.Message}");
+                        allOk = false;
+                        return new FileUploadResult(Path.GetFileName(file), false, string.Empty);
+                    }
+                    finally
+                    {
+                        sem.Release();
+                    }
+                }));
             }
+
+            var resultArray = await Task.WhenAll(tarefas);
+            resultados.AddRange(resultArray);
+
 
             // Envia zip de segurança
             string? zipTmp = null;
@@ -224,7 +268,9 @@ public class BackupService
                 if (!enviados.Contains(zipName))
                 {
                     zipTmp = CriarZipTemporario(pasta);
-                    await UploadFileWithRetryAsync(driveId, folderId, zipTmp);
+                    var r = await UploadAndVerifyAsync(driveId, folderId, zipTmp);
+                    resultados.Add(r);
+                    if (!r.Verificado) allOk = false;
                 }
             }
             catch (Exception ex)
@@ -247,6 +293,8 @@ public class BackupService
         {
             _log.Error($"Falha ao enviar backup: {ex.Message}");
         }
+
+        return resultados;
     }
 
     public async Task ProcessarBackupAsync(
@@ -284,3 +332,5 @@ public class BackupService
         }
     }
 }
+
+public record FileUploadResult(string Nome, bool Verificado, string Sha1Hash);
