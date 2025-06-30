@@ -1,11 +1,14 @@
 using System;
+using System.IO;
+using Newtonsoft.Json;
 
 
 namespace OrganizadorArquivosWPF.Services
 {
     /// <summary>
-    /// Provides access to application configuration values.
-    /// Values are read from environment variables.
+/// Provides access to application configuration values.
+/// Values are read from a JSON file stored under the user's
+/// LocalApplicationData folder.
     /// </summary>
     public static class Config
     {
@@ -16,18 +19,28 @@ namespace OrganizadorArquivosWPF.Services
 
         static Config()
         {
-            TenantId = GetSetting("TENANT_ID");
-            ClientId = GetSetting("CLIENT_ID");
-            ClientSecret = GetSetting("CLIENT_SECRET");
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "OneEngRenamer");
+            var file = Path.Combine(dir, "config.json");
+
+            if (!File.Exists(file))
+                throw new InvalidOperationException($"Configuration file '{file}' not found.");
+
+            var json = File.ReadAllText(file);
+            var cfg = JsonConvert.DeserializeObject<ConfigFile>(json)
+                ?? throw new InvalidOperationException("Invalid configuration file.");
+
+            TenantId = cfg.TenantId ?? throw new InvalidOperationException("TenantId missing.");
+            ClientId = cfg.ClientId ?? throw new InvalidOperationException("ClientId missing.");
+            ClientSecret = cfg.ClientSecret ?? throw new InvalidOperationException("ClientSecret missing.");
         }
 
-        private static string GetSetting(string key)
+        private class ConfigFile
         {
-            var value = Environment.GetEnvironmentVariable(key);
-            if (!string.IsNullOrWhiteSpace(value))
-                return value;
-
-            throw new InvalidOperationException($"Configuration value '{key}' not found.");
+            public string? TenantId { get; set; }
+            public string? ClientId { get; set; }
+            public string? ClientSecret { get; set; }
         }
     }
 }
