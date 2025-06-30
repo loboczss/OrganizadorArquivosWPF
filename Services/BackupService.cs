@@ -8,6 +8,7 @@ using OrganizadorArquivosWPF.Models;
 using Microsoft.Graph.Drives.Item.Items.Item.CreateUploadSession;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Linq;
 using System.Threading.Tasks;
 using System;
