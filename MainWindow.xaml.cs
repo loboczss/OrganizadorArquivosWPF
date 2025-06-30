@@ -475,8 +475,8 @@ namespace OrganizadorArquivosWPF
         private async Task RunUpdateAsync()
         {
             var exePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
-                                       "att",
-                                       "UpdateCompiller.exe");
+                                       "atualiza",
+                                       "AtualizadorApp.Wpf.exe");
             if (!File.Exists(exePath))
             {
                 System.Windows.MessageBox.Show($"Arquivo de atualização não encontrado:\n{exePath}",
