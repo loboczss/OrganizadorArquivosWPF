@@ -8,7 +8,7 @@ namespace OrganizadorArquivosWPF.Services
     /// <summary>
 /// Provides access to application configuration values.
 /// Values are read from a JSON file stored under the user's
-/// LocalApplicationData folder.
+/// LocalApplicationData folder.ihevjbdvldnbvkeçjbv çkenavmgv
     /// </summary>
     public static class Config
     {
