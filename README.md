@@ -5,9 +5,9 @@ This application interacts with Microsoft Graph and requires Azure AD credential
 
 Credentials are read from environment variables. Set the following variables:
 
-- `TENANT_ID` – Azure Active Directory tenant ID
-- `CLIENT_ID` – Application (client) ID
-- `CLIENT_SECRET` – Application secret
+- `3b08e64e-b3be-402b-bb26-1fa4f91cf61f` – Azure Active Directory tenant ID
+- `3cffac6a-f9d9-42d1-9065-4054fcd40163` – Application (client) ID
+- `JFd8Q~hHgTYYo0P0EjAM8mpe3xm3.5vTfCHRFc.T` – Application secret
 
 OrganizadorArquivosWPF is a Windows Presentation Foundation (WPF) desktop application used by One Engenharia LTDA to organize engineering files. It automates tasks such as renaming, moving and backing up documents to cloud storage.
 
