@@ -24,14 +24,8 @@ public class BackupService
     private const string SPSitePath = "OneEngenharia";
     private const string DocumentLibraryName = "DatalogGERAL";
 
-    private static readonly string BackupHistoryFile = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "OneEngRenamer",
-        "uploaded_backups.txt");
-
     private readonly GraphServiceClient _graph;
     private readonly LoggerService _log = LoggerService.Instance;
-    private readonly HashSet<string> _skipLogged = new(StringComparer.OrdinalIgnoreCase);
     private string? _driveId;
 
     public BackupService()
@@ -41,26 +35,6 @@ public class BackupService
         _graph = new GraphServiceClient(credential, scopes);
     }
 
-    private static HashSet<string> CarregarHistorico(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-                return new HashSet<string>(File.ReadAllLines(path), StringComparer.OrdinalIgnoreCase);
-        }
-        catch { }
-        return new(StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static void SalvarHistorico(string path, IEnumerable<string> itens)
-    {
-        try
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllLines(path, itens);
-        }
-        catch { }
-    }
 
     private static string? ExtrairOs(string pasta)
     {
@@ -187,31 +161,42 @@ public class BackupService
         numOs ??= ExtrairOs(pasta);
         if (string.IsNullOrWhiteSpace(numOs)) return;
 
-        var enviados = CarregarHistorico(BackupHistoryFile);
-        if (enviados.Contains(numOs))
-        {
-            if (_skipLogged.Add(numOs))
-                _log.Info($"Backup já enviado para a O.S {numOs}. Pulando envio.");
-            return;
-        }
-
         try
         {
             var driveId = await ObterDriveIdAsync();
 
-            // Cria pasta no SharePoint com nome da OS
-            var pastaItem = new DriveItem
-            {
-                Name = numOs,
-                Folder = new Folder(),
-                AdditionalData = new Dictionary<string, object>
-                {
-                    { "@microsoft.graph.conflictBehavior", "rename" }
-                }
-            };
+            // Verifica se a pasta da OS já existe
+            var rootChildren = await _graph.Drives[driveId].Items["root"].Children.GetAsync();
+            var existingFolder = rootChildren.Value
+                .FirstOrDefault(it => it.Folder != null &&
+                                     string.Equals(it.Name, numOs, StringComparison.OrdinalIgnoreCase));
 
-            var createdFolder = await _graph.Drives[driveId].Items["root"].Children.PostAsync(pastaItem);
-            string folderId = createdFolder!.Id;
+            string folderId;
+            if (existingFolder != null)
+            {
+                folderId = existingFolder.Id;
+            }
+            else
+            {
+                // Cria pasta no SharePoint com nome da OS
+                var pastaItem = new DriveItem
+                {
+                    Name = numOs,
+                    Folder = new Folder(),
+                    AdditionalData = new Dictionary<string, object>
+                    {
+                        { "@microsoft.graph.conflictBehavior", "rename" }
+                    }
+                };
+                var createdFolder = await _graph.Drives[driveId].Items["root"].Children.PostAsync(pastaItem);
+                folderId = createdFolder!.Id;
+            }
+
+            // Lista arquivos já existentes na pasta
+            var folderChildren = await _graph.Drives[driveId].Items[folderId].Children.GetAsync();
+            var enviados = new HashSet<string>(folderChildren.Value
+                .Where(it => it.File != null)
+                .Select(it => it.Name), StringComparer.OrdinalIgnoreCase);
 
             // Envia arquivos
             bool allOk = true;
@@ -219,6 +204,9 @@ public class BackupService
             {
                 try
                 {
+                    if (enviados.Contains(Path.GetFileName(file)))
+                        continue;
+
                     await UploadFileWithRetryAsync(driveId, folderId, file);
                 }
                 catch (Exception ex)
@@ -232,8 +220,12 @@ public class BackupService
             string? zipTmp = null;
             try
             {
-                zipTmp = CriarZipTemporario(pasta);
-                await UploadFileWithRetryAsync(driveId, folderId, zipTmp);
+                var zipName = Path.GetFileName(pasta) + ".zip";
+                if (!enviados.Contains(zipName))
+                {
+                    zipTmp = CriarZipTemporario(pasta);
+                    await UploadFileWithRetryAsync(driveId, folderId, zipTmp);
+                }
             }
             catch (Exception ex)
             {
@@ -246,12 +238,7 @@ public class BackupService
                     File.Delete(zipTmp);
             }
 
-            if (allOk)
-            {
-                enviados.Add(numOs);
-                SalvarHistorico(BackupHistoryFile, enviados);
-            }
-            else
+            if (!allOk)
             {
                 _log.Warning("Alguns arquivos falharam ao enviar. Tente novamente mais tarde.");
             }
