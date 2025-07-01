@@ -223,7 +223,6 @@ namespace OrganizadorArquivosWPF.Services
                     { "Versão do Programa", Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "(N/A)" },
                 };
 
-                _logger.Info($"Início da Renomeação por: {nomeFuncionario} (Matrícula: {matriculaFuncionario})");
 
                 // 4) Verifica se destino está vazio
                 if (Directory.EnumerateFileSystemEntries(clienteDir).Any())
@@ -306,7 +305,6 @@ namespace OrganizadorArquivosWPF.Services
                     }
 
                     _lastMapping.Add((dst, src));
-                    _logger.Info($"{Path.GetFileName(src)} → {Path.GetFileName(dst)}");
                     Step();
                 };
 

@@ -223,7 +223,8 @@ namespace OrganizadorArquivosWPF
 
             bool manualMode = osNum.Length > 0 && osNum.All(c => c == '0');
 
-            _log.Info(manualMode ? "Modo manual ativado." : "Buscando na base de dados…");
+            if (manualMode)
+                _log.Warning("Modo manual ativado");
 
             ClientRecord record;
             if (!manualMode)
@@ -293,7 +294,6 @@ namespace OrganizadorArquivosWPF
                 // Limpa o log visual, texto da O.S e abre a pasta do cliente após concluir a operação com sucesso
                 _log.Clear();
                 TxtOS.Clear();
-                _log.Info($"Pasta selecionada: {_pastaOrigem}");
                 if (_renamer != null && Directory.Exists(_renamer.LastDestination))
                     Process.Start("explorer.exe", _renamer.LastDestination);
             }
@@ -354,14 +354,7 @@ namespace OrganizadorArquivosWPF
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 
-            if (result == MessageBoxResult.Yes)
-            {
-                _log.Info($"Usuário confirmou o cliente: {nomeCliente}");
-                return true;
-            }
-
-            _log.Info($"Usuário NÃO confirmou o cliente: {nomeCliente}");
-            return false;
+            return result == MessageBoxResult.Yes;
         }
         #endregion
 
@@ -386,7 +379,6 @@ namespace OrganizadorArquivosWPF
                 : defaultPath;
 
             TxtPasta.Text = Path.GetFileName(_pastaOrigem);
-            _log.Info($"Pasta de origem: {_pastaOrigem}");
         }
 
         private void ConfigurarProgressBar()
@@ -508,7 +500,6 @@ namespace OrganizadorArquivosWPF
             {
                 _pastaOrigem = dlg.SelectedPath;
                 TxtPasta.Text = Path.GetFileName(_pastaOrigem);
-                _log.Info($"Pasta selecionada: {_pastaOrigem}");
                 Properties.Settings.Default.LastFolder = _pastaOrigem;
                 Properties.Settings.Default.Save();
             }

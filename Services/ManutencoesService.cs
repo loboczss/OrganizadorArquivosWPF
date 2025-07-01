@@ -49,7 +49,6 @@ namespace OrganizadorArquivosWPF.Services
             var scopes = new[] { "https://graph.microsoft.com/.default" };
             var credential = new ClientSecretCredential(Config.TenantId, Config.ClientId, Config.ClientSecret);
             _graph = new GraphServiceClient(credential, scopes);
-            _log?.Info("ManutencoesService inicializado");
         }
 
         public static DateTime? GetCacheTimestamp()
@@ -57,7 +56,6 @@ namespace OrganizadorArquivosWPF.Services
             try
             {
                 var ts = File.Exists(OfflinePath) ? File.GetLastWriteTime(OfflinePath) : (DateTime?)null;
-                _log?.Info($"Timestamp do cache: {ts}");
                 return ts;
             }
             catch (Exception ex)
@@ -70,14 +68,12 @@ namespace OrganizadorArquivosWPF.Services
         public async Task<JArray> ObterDadosAsync(IProgress<int> progress = null)
         {
             progress?.Report(0);
-            _log?.Info("Iniciando obtenção de dados de manutenção");
             bool fromInternet = false;
 
             if (TemInternet())
             {
                 try
                 {
-                    _log?.Info("Internet detectada, baixando arquivos do SharePoint");
                     var arquivos = await BaixarUltimosArquivosManutencaoAsync(progress);
 
                     if (arquivos.Count == 0)
@@ -90,7 +86,6 @@ namespace OrganizadorArquivosWPF.Services
 
                     Directory.CreateDirectory(Path.GetDirectoryName(OfflinePath));
                     File.WriteAllText(OfflinePath, _dados.ToString(Formatting.None), Encoding.UTF8);
-                    _log?.Info("Cache de dados atualizado");
 
                     fromInternet = true;
                     progress?.Report(100);
@@ -113,7 +108,6 @@ namespace OrganizadorArquivosWPF.Services
                         ? JArray.Parse(File.ReadAllText(OfflinePath, Encoding.UTF8))
                         : new JArray();
 
-                    _log.Info($"Dados carregados do cache: {_dados.Count} registros.");
                     progress?.Report(100);
                 }
                 catch (Exception ex)
@@ -125,7 +119,6 @@ namespace OrganizadorArquivosWPF.Services
             }
 
             _records = ParseClientRecords(_dados);
-            _log?.Info($"Total de registros carregados: {_records.Count}");
             UpdateCompleted?.Invoke(DateTime.Now, fromInternet);
             return _dados;
         }
@@ -133,12 +126,10 @@ namespace OrganizadorArquivosWPF.Services
         private async Task<Dictionary<string, string>> BaixarUltimosArquivosManutencaoAsync(
             IProgress<int> progress, int maxTentativas = 3)
         {
-            _log?.Info("Iniciando download dos arquivos de manutenção");
             for (int tentativa = 1; tentativa <= maxTentativas; tentativa++)
             {
                 try
                 {
-                    _log?.Info($"Tentativa {tentativa} de baixar arquivos do SharePoint");
                     return await BaixarArquivosSharePointInternoAsync(progress);
                 }
                 catch (Exception ex) when (tentativa < maxTentativas)
@@ -156,7 +147,6 @@ namespace OrganizadorArquivosWPF.Services
             if (!string.IsNullOrEmpty(_driveId))
                 return _driveId;
 
-            _log?.Info("Obtendo Drive ID diretamente da lista do SharePoint");
 
             try
             {
@@ -170,7 +160,6 @@ namespace OrganizadorArquivosWPF.Services
                     throw new Exception("A lista não retornou um Drive válido.");
 
                 _driveId = drive.Id;
-                _log?.Info($"✅ Drive ID obtido: {_driveId}");
                 return _driveId;
             }
             catch (Exception ex)
@@ -183,7 +172,6 @@ namespace OrganizadorArquivosWPF.Services
         private async Task<Dictionary<string, string>> BaixarArquivosSharePointInternoAsync(IProgress<int> progress)
         {
             string driveId = await ObterDriveIdAsync();
-            _log?.Info("Listando arquivos .json no SharePoint");
 
             var page = await _graph
                 .Drives[driveId]
@@ -195,7 +183,6 @@ namespace OrganizadorArquivosWPF.Services
                 .Where(it => it.File != null && it.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            _log?.Info($"{jsonFiles.Count} arquivos .json encontrados");
 
             if (!jsonFiles.Any())
                 throw new FileNotFoundException("Nenhum .json encontrado na biblioteca.");
@@ -206,7 +193,6 @@ namespace OrganizadorArquivosWPF.Services
 
             foreach (string padrao in _padroesArquivo)
             {
-                _log?.Info($"Procurando arquivos para o padrão '{padrao}'");
                 var arquivosPadrao = jsonFiles
                     .Where(f => f.Name.IndexOf(padrao, StringComparison.OrdinalIgnoreCase) >= 0)
                     .OrderByDescending(f => f.LastModifiedDateTime)
@@ -232,7 +218,6 @@ namespace OrganizadorArquivosWPF.Services
 
                     using var reader = new StreamReader(stream);
                     resultados[padrao] = await reader.ReadToEndAsync();
-                    _log?.Info($"Arquivo '{meta.Name}' baixado com sucesso");
                 }
                 catch (Exception ex)
                 {
@@ -251,12 +236,10 @@ namespace OrganizadorArquivosWPF.Services
 
         private static JArray CombinarArquivosJson(Dictionary<string, string> arquivos)
         {
-            _log?.Info("Combinando arquivos JSON");
             var combinado = new JArray();
 
             foreach (var kv in arquivos)
             {
-                _log?.Info($"Processando '{kv.Key}'");
                 try
                 {
                     string conteudo = kv.Value?.Trim();
@@ -298,14 +281,12 @@ namespace OrganizadorArquivosWPF.Services
                 }
             }
 
-            _log?.Info($"Total combinado: {combinado.Count} registros");
 
             return combinado;
         }
 
         public static List<ClientRecord> ParseClientRecords(JArray array)
         {
-            _log?.Info("Convertendo JArray em registros de cliente");
             var list = new List<ClientRecord>();
             if (array == null) return list;
 
@@ -330,7 +311,6 @@ namespace OrganizadorArquivosWPF.Services
                     NomeArquivoBase = string.Empty
                 });
             }
-            _log?.Info($"Total de registros convertidos: {list.Count}");
             return list;
         }
 
@@ -345,7 +325,6 @@ namespace OrganizadorArquivosWPF.Services
             {
                 var list = ParseClientRecords(JArray.Parse(File.ReadAllText(OfflinePath, Encoding.UTF8)));
                 _records = new List<ClientRecord>(list);
-                _log?.Info($"{list.Count} registros carregados do cache");
                 return list;
             }
             catch
@@ -357,9 +336,7 @@ namespace OrganizadorArquivosWPF.Services
 
         public async Task<List<ClientRecord>> ObterClientRecordsAsync(IProgress<int> p = null)
         {
-            _log?.Info("Solicitação de registros de cliente");
             await ObterDadosAsync(p);
-            _log?.Info($"Retornando {_records.Count} registros");
             return new List<ClientRecord>(_records);
         }
 
@@ -369,7 +346,6 @@ namespace OrganizadorArquivosWPF.Services
             {
                 using (var wc = new WebClient())
                     wc.DownloadString("https://www.google.com/generate_204");
-                _log?.Info("Conexão com a internet verificada via Google");
                 return true;
             }
             catch
@@ -378,7 +354,6 @@ namespace OrganizadorArquivosWPF.Services
                 {
                     using (var wc = new WebClient())
                         wc.DownloadString("https://www.bing.com");
-                    _log?.Info("Conexão com a internet verificada via Bing");
                     return true;
                 }
                 catch
@@ -393,7 +368,6 @@ namespace OrganizadorArquivosWPF.Services
         {
             if (_timer != null) return;
 
-            _log?.Info($"Iniciando auto atualização a cada {interval.TotalMinutes} min");
 
             _timerProgress = p;
             _timer = new Timer(interval.TotalMilliseconds) { AutoReset = true, Enabled = true };
@@ -420,7 +394,6 @@ namespace OrganizadorArquivosWPF.Services
         public void StopAutoUpdate()
         {
             if (_timer == null) return;
-            _log?.Info("Auto atualização parada");
             _timer.Stop();
             _timer.Dispose();
             _timer = null;
@@ -430,7 +403,6 @@ namespace OrganizadorArquivosWPF.Services
 
         public void ClearData()
         {
-            _log?.Info("Limpando dados em memória");
             _dados = null;
         }
     }
