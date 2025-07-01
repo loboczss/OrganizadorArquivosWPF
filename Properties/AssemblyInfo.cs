@@ -48,5 +48,5 @@ using System.Windows;
 //      Número da Versão
 //      Revisão
 //
-[assembly: AssemblyVersion("2.0.0.3")]
+[assembly: AssemblyVersion("2.0.0.5")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
