@@ -295,8 +295,17 @@
                                 Click="BtnAbrir_Click" Visibility="Collapsed"/>
 
                         <!-- Progress -->
-                        <ProgressBar x:Name="Progress" Grid.Row="3" Height="18" Margin="0,16,0,0"
-                                     IsIndeterminate="false" Visibility="Collapsed" Value="0"/>
+                        <Grid Grid.Row="3" Margin="0,16,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ProgressBar x:Name="Progress" Grid.Column="0" Height="18"
+                                         IsIndeterminate="false" Visibility="Collapsed" Value="0"/>
+                            <Button x:Name="BtnSyncAll" Grid.Column="1" Content="Sincronizar Tudo"
+                                    Style="{StaticResource PrimaryButton}" Height="24" Margin="12,0,0,0"
+                                    Click="BtnSyncAll_Click"/>
+                        </Grid>
                     </Grid>
                 </Border>
 

@@ -511,6 +511,14 @@ namespace OrganizadorArquivosWPF
                 Process.Start("explorer.exe", _renamer.LastDestination);
         }
 
+        private async void BtnSyncAll_Click(object sender, RoutedEventArgs e)
+        {
+            if (_manualSyncRunning)
+                return;
+
+            await BaixarDadosAgoraAsync();
+        }
+
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             if (!AllowClose)
