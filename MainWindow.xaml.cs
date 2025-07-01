@@ -637,10 +637,13 @@ namespace OrganizadorArquivosWPF
 
             try
             {
-                var downloadTask = _manutencoes.ObterDadosAsync(_downloadReporter);
+                var tracker = new Utils.ProgressTracker(_downloadReporter, 3);
+                var downloadTask = _manutencoes.ObterDadosAsync(tracker.NextSegment());
                 var instService = new InstalacaoService();
-                var instalacaoTask = instService.AtualizarArquivoAsync();
+                var instalacaoTask = instService.AtualizarArquivoAsync(tracker.NextSegment());
+                var uploadSeg = tracker.NextSegment();
                 await Task.WhenAll(downloadTask, instalacaoTask, backupTask);
+                uploadSeg.Report(100);
                 _manutencoes.ClearData();
 
                 if (backupTask.Status == TaskStatus.RanToCompletion)
