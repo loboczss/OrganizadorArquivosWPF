@@ -44,15 +44,17 @@ namespace OrganizadorArquivosWPF
 
             _tray = new TrayService();
             var progress = new Progress<int>(v => splash.SetProgress(v));
+            var tracker = new Utils.ProgressTracker(progress, 2);
 
             // Executa downloads em paralelo e limita o tempo de espera
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-            var trayTask = _tray.StartAsync(progress).WaitAsync(cts.Token);
+            var trayTask = _tray.StartAsync(tracker.NextSegment()).WaitAsync(cts.Token);
 
             splash.SetStatus("Baixando planilha de funcionários...");
             splash.SetProgress(-1);
             var funcService = new FuncionariosService();
-            var funcTask = Task.Run(() => funcService.ListarTodos(), cts.Token);
+            var funcSeg = tracker.NextSegment();
+            var funcTask = Task.Run(() => { funcService.ListarTodos(); funcSeg.Report(100); }, cts.Token);
 
             try
             {

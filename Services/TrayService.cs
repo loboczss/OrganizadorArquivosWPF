@@ -83,9 +83,11 @@ namespace OrganizadorArquivosWPF.Services
                         {
                             try
                             {
-                                await _manutencoes.ObterDadosAsync(_progress);
+                                var tracker = new Utils.ProgressTracker(_progress, 2);
+                                await _manutencoes.ObterDadosAsync(tracker.NextSegment());
                                 _manutencoes.ClearData();
-                                await _instalacao.AtualizarArquivoAsync();
+                                await _instalacao.AtualizarArquivoAsync(tracker.NextSegment());
+                                _progress?.Report(100);
                             }
                             catch (Exception ex) { _log.Error($"Download manual: {ex.Message}"); }
                         }
@@ -109,13 +111,14 @@ namespace OrganizadorArquivosWPF.Services
 
         public async Task StartAsync(IProgress<int> progress)
         {
-
             _progress = progress;
+            var tracker = new Utils.ProgressTracker(progress, 2);
             try
             {
-                await _manutencoes.ObterDadosAsync(progress);
+                await _manutencoes.ObterDadosAsync(tracker.NextSegment());
                 _manutencoes.ClearData();
-                await _instalacao.AtualizarArquivoAsync();
+                await _instalacao.AtualizarArquivoAsync(tracker.NextSegment());
+                progress?.Report(100);
             }
             catch { }
             _manutencoes.StartAutoUpdate(_interval, progress);
