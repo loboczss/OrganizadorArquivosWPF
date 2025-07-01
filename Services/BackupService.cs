@@ -12,6 +12,8 @@ using System.Threading;
 using System.Linq;
 using System.Threading.Tasks;
 using System;
+using System.Net;
+using Microsoft.Kiota.Abstractions;
 
 namespace OrganizadorArquivosWPF.Services;
 
@@ -211,11 +213,16 @@ public class BackupService
         {
             var driveId = await ObterDriveIdAsync();
 
-            // Verifica se a pasta da OS já existe
-            var rootChildren = await _graph.Drives[driveId].Items["root"].Children.GetAsync();
-            var existingFolder = rootChildren.Value
-                .FirstOrDefault(it => it.Folder != null &&
-                                     string.Equals(it.Name, numOs, StringComparison.OrdinalIgnoreCase));
+            // Verifica se a pasta da OS já existe (usa caminho absoluto para evitar paginação)
+            DriveItem? existingFolder = null;
+            try
+            {
+                existingFolder = await _graph.Drives[driveId].Root.ItemWithPath(numOs).GetAsync();
+            }
+            catch (ApiException ex) when (ex.ResponseStatusCode == (int)HttpStatusCode.NotFound)
+            {
+                existingFolder = null;
+            }
 
             string folderId;
             if (existingFolder != null)
@@ -224,14 +231,14 @@ public class BackupService
             }
             else
             {
-                // Cria pasta no SharePoint com nome da OS
+                // Cria pasta no SharePoint com nome da OS sem gerar duplicatas
                 var pastaItem = new DriveItem
                 {
                     Name = numOs,
                     Folder = new Folder(),
                     AdditionalData = new Dictionary<string, object>
                     {
-                        { "@microsoft.graph.conflictBehavior", "rename" }
+                        { "@microsoft.graph.conflictBehavior", "fail" }
                     }
                 };
                 var createdFolder = await _graph.Drives[driveId].Items["root"].Children.PostAsync(pastaItem);
