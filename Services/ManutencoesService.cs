@@ -1,6 +1,3 @@
-// ManutencoesService.cs — WPF | C# 7.3 | .NET Framework 4.x
-// ONE Engenharia • Revisão: 25/06/2025 • VERSÃO COM GRAPH E ERROS CS0119 CORRIGIDOS
-
 using Azure.Identity;
 using Microsoft.Graph;
 using Newtonsoft.Json;
@@ -19,10 +16,9 @@ namespace OrganizadorArquivosWPF.Services
 {
     public class ManutencoesService
     {
-
-        private const string SPDomain = "oneengenharia.sharepoint.com";
-        private const string SPSitePath = "OneEngenharia";
-        private const string DocumentLibraryName = "ArquivosJSON";
+        // ─── SharePoint constantes ──────────────────────────────────────────────
+        private const string SiteId = "03b55b3a-5e43-430f-90db-687ed2c5b32f";
+        private const string ListId = "eeee4abc-d931-4f12-b88b-747d024baf7f";
 
         private static readonly string OfflinePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -157,20 +153,31 @@ namespace OrganizadorArquivosWPF.Services
 
         private async Task<string> ObterDriveIdAsync()
         {
-            if (!string.IsNullOrEmpty(_driveId)) return _driveId;
+            if (!string.IsNullOrEmpty(_driveId))
+                return _driveId;
 
-            _log?.Info("Obtendo Drive ID do SharePoint");
+            _log?.Info("Obtendo Drive ID diretamente da lista do SharePoint");
 
-            var site = await _graph.Sites[$"{SPDomain}:/sites/{SPSitePath}"].GetAsync();
-            var drives = await _graph.Sites[site.Id].Drives.GetAsync();
-            var drive = drives.Value.FirstOrDefault(d => d.Name == DocumentLibraryName);
+            try
+            {
+                var drive = await _graph
+                    .Sites[SiteId]
+                    .Lists[ListId]
+                    .Drive
+                    .GetAsync();
 
-            if (drive == null)
-                throw new Exception($"Biblioteca '{DocumentLibraryName}' não encontrada.");
+                if (drive == null || string.IsNullOrEmpty(drive.Id))
+                    throw new Exception("A lista não retornou um Drive válido.");
 
-            _driveId = drive.Id;
-            _log?.Info($"Drive ID obtido: {_driveId}");
-            return _driveId;
+                _driveId = drive.Id;
+                _log?.Info($"✅ Drive ID obtido: {_driveId}");
+                return _driveId;
+            }
+            catch (Exception ex)
+            {
+                _log?.Error($"Erro ao obter Drive ID: {ex.Message}");
+                throw;
+            }
         }
 
         private async Task<Dictionary<string, string>> BaixarArquivosSharePointInternoAsync(IProgress<int> progress)
@@ -178,8 +185,12 @@ namespace OrganizadorArquivosWPF.Services
             string driveId = await ObterDriveIdAsync();
             _log?.Info("Listando arquivos .json no SharePoint");
 
-            Microsoft.Graph.Models.DriveItemCollectionResponse page =
-                await _graph.Drives[driveId].Items["root"].Children.GetAsync();
+            var page = await _graph
+                .Drives[driveId]
+                .Items["root"]
+                .Children
+                .GetAsync();
+
             var jsonFiles = page.Value
                 .Where(it => it.File != null && it.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
                 .ToList();
@@ -213,7 +224,12 @@ namespace OrganizadorArquivosWPF.Services
 
                 try
                 {
-                    using var stream = await _graph.Drives[driveId].Items[meta.Id].Content.GetAsync();
+                    using var stream = await _graph
+                        .Drives[driveId]
+                        .Items[meta.Id]
+                        .Content
+                        .GetAsync();
+
                     using var reader = new StreamReader(stream);
                     resultados[padrao] = await reader.ReadToEndAsync();
                     _log?.Info($"Arquivo '{meta.Name}' baixado com sucesso");
@@ -296,7 +312,7 @@ namespace OrganizadorArquivosWPF.Services
             foreach (JObject obj in array.OfType<JObject>())
             {
                 string numos = obj.Value<string>("NUMOS") ?? string.Empty;
-                string uf = obj.Value<string>("UF") ?? (numos.Length >= 2 ? numos.Substring(0, 2).ToUpperInvariant() : string.Empty);
+                string uf = obj.Value<string>("UF") ?? (numos.Length >= 2 ? numos[..2].ToUpperInvariant() : string.Empty);
 
                 list.Add(new ClientRecord
                 {
