@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Timers;
 using OrganizadorArquivosWPF.Models;
 
 namespace OrganizadorArquivosWPF.Services
@@ -21,6 +22,7 @@ namespace OrganizadorArquivosWPF.Services
 
         private readonly GraphServiceClient _graph;
         private string _driveId;
+        private Timer _timer;
         private static LoggerService _log => LoggerService.Instance;
 
         public InstalacaoService()
@@ -79,6 +81,37 @@ namespace OrganizadorArquivosWPF.Services
             Directory.CreateDirectory(Path.GetDirectoryName(OfflinePath));
             using var reader = new StreamReader(stream);
             File.WriteAllText(OfflinePath, await reader.ReadToEndAsync());
+        }
+
+        /// <summary>
+        /// Baixa o arquivo de instalação do SharePoint substituindo
+        /// qualquer versão local existente.
+        /// </summary>
+        public async Task AtualizarArquivoAsync()
+        {
+            try
+            {
+                await BaixarArquivoAsync();
+            }
+            catch (Exception ex)
+            {
+                _log?.Warning($"Erro ao atualizar arquivo de instalação: {ex.Message}");
+            }
+        }
+
+        public void StartAutoUpdate(TimeSpan interval)
+        {
+            if (_timer != null) return;
+            _timer = new Timer(interval.TotalMilliseconds) { AutoReset = true, Enabled = true };
+            _timer.Elapsed += async (s, e) => await AtualizarArquivoAsync();
+        }
+
+        public void StopAutoUpdate()
+        {
+            if (_timer == null) return;
+            _timer.Stop();
+            _timer.Dispose();
+            _timer = null;
         }
 
         private void GarantirArquivoLocal()

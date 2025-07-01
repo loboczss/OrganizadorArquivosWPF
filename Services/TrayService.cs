@@ -15,6 +15,7 @@ namespace OrganizadorArquivosWPF.Services
     {
         private readonly NotifyIcon _icon;
         private readonly ManutencoesService _manutencoes;
+        private readonly InstalacaoService _instalacao;
         // Intervalo padrão para atualizações automáticas
         // A primeira sincronização já ocorre na tela splash. Por isso, a
         // próxima tentativa de download só deve acontecer após 10 minutos.
@@ -25,6 +26,7 @@ namespace OrganizadorArquivosWPF.Services
         public TrayService()
         {
             _manutencoes = new ManutencoesService();
+            _instalacao = new InstalacaoService();
 
             var icoPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ico-app.ico");
             _icon = new NotifyIcon
@@ -83,6 +85,7 @@ namespace OrganizadorArquivosWPF.Services
                             {
                                 await _manutencoes.ObterDadosAsync(_progress);
                                 _manutencoes.ClearData();
+                                await _instalacao.AtualizarArquivoAsync();
                             }
                             catch (Exception ex) { _log.Error($"Download manual: {ex.Message}"); }
                         }
@@ -112,9 +115,11 @@ namespace OrganizadorArquivosWPF.Services
             {
                 await _manutencoes.ObterDadosAsync(progress);
                 _manutencoes.ClearData();
+                await _instalacao.AtualizarArquivoAsync();
             }
             catch { }
             _manutencoes.StartAutoUpdate(_interval, progress);
+            _instalacao.StartAutoUpdate(_interval);
         }
 
         public void Dispose()
@@ -122,6 +127,7 @@ namespace OrganizadorArquivosWPF.Services
             _icon.Visible = false;
             _icon.Dispose();
             _manutencoes.StopAutoUpdate();
+            _instalacao.StopAutoUpdate();
         }
     }
 }
