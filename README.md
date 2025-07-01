@@ -7,6 +7,13 @@ Credentials are read from a JSON file located at
 `%LOCALAPPDATA%\OneEngRenamer\config.json`. Create this file with the
 following content:
 
+```json
+{
+  "TenantId": "<your-tenant-id>",
+  "ClientId": "<your-client-id>",
+  "ClientSecret": "<your-client-secret>"
+}
+```
 
 OrganizadorArquivosWPF is a Windows Presentation Foundation (WPF) desktop application used by One Engenharia LTDA to organize engineering files. It automates tasks such as renaming, moving and backing up documents to cloud storage.
 

@@ -168,14 +168,34 @@ public class BackupService
         bool ok = false;
         if (item != null)
         {
-            var remoto = await _graph.Drives[driveId]
-                .Items[item.Id]
-                .GetAsync(r => r.QueryParameters.Select = new[] { "file" });
-            var hashRemoto = remoto.File?.Hashes?.Sha1Hash;
-            ok = hashRemoto != null &&
-                 string.Equals(hashRemoto, hashLocal, StringComparison.OrdinalIgnoreCase);
+            ok = await WaitForFileHashAsync(driveId, item.Id, hashLocal);
         }
         return new FileUploadResult(Path.GetFileName(file), ok, hashLocal);
+    }
+
+    private async Task<bool> WaitForFileHashAsync(
+        string driveId,
+        string itemId,
+        string expectedHash,
+        int attempts = 5,
+        int delayMs = 2000)
+    {
+        for (int i = 0; i < attempts; i++)
+        {
+            var remoto = await _graph.Drives[driveId]
+                .Items[itemId]
+                .GetAsync(r => r.QueryParameters.Select = new[] { "file" });
+
+            var hashRemoto = remoto.File?.Hashes?.Sha1Hash;
+            if (!string.IsNullOrEmpty(hashRemoto))
+            {
+                return string.Equals(hashRemoto, expectedHash, StringComparison.OrdinalIgnoreCase);
+            }
+
+            await Task.Delay(delayMs);
+        }
+
+        return false;
     }
 
 
