@@ -11,6 +11,7 @@ using OrganizadorArquivosWPF.Services;
 using OrganizadorArquivosWPF.Models;
 using OrganizadorArquivosWPF.Views;
 using OrganizadorArquivosWPF.Helpers;
+using OrganizadorArquivosWPF.Utils;
 
 namespace OrganizadorArquivosWPF
 {
@@ -43,16 +44,26 @@ namespace OrganizadorArquivosWPF
             splash.Show();
 
             _tray = new TrayService();
-            var progress = new Progress<int>(v => splash.SetProgress(v));
+            var baseProgress = new Progress<int>(v => splash.SetProgress(v));
+
+            // 4 arquivos de manutenção + instalação + funcionários
+            var multi = new Utils.MultiProgress(baseProgress, 6);
+            var trayProgress = multi.NextSegment(5);
+            var funcProgress = multi.NextSegment();
 
             // Executa downloads em paralelo e limita o tempo de espera
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-            var trayTask = _tray.StartAsync(progress).WaitAsync(cts.Token);
+            var trayTask = _tray.StartAsync(trayProgress).WaitAsync(cts.Token);
 
             splash.SetStatus("Baixando planilha de funcionários...");
-            splash.SetProgress(-1);
+            funcProgress.Report(-1);
             var funcService = new FuncionariosService();
-            var funcTask = Task.Run(() => funcService.ListarTodos(), cts.Token);
+            var funcTask = Task.Run(() =>
+            {
+                var list = funcService.ListarTodos();
+                funcProgress.Report(100);
+                return list;
+            }, cts.Token);
 
             try
             {
