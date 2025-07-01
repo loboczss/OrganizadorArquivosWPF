@@ -15,6 +15,7 @@ using OrganizadorArquivosWPF.Models;
 using OrganizadorArquivosWPF.Services;
 using OrganizadorArquivosWPF.Views;
 using OrganizadorArquivosWPF.Helpers;
+using OrganizadorArquivosWPF.Utils;
 
 namespace OrganizadorArquivosWPF
 {
@@ -637,9 +638,34 @@ namespace OrganizadorArquivosWPF
 
             try
             {
-                var downloadTask = _manutencoes.ObterDadosAsync(_downloadReporter);
+                var mp = new Utils.MultiProgress(_downloadReporter, 6); // 4 manutenções + instalação + uploads
+                var manutProg = mp.NextSegment(4);
+                var instProg = mp.NextSegment();
+                var uploadProg = mp.NextSegment();
+
+                var downloadTask = _manutencoes.ObterDadosAsync(manutProg);
                 var instService = new InstalacaoService();
-                var instalacaoTask = instService.AtualizarArquivoAsync();
+                instProg.Report(-1);
+                var instalacaoTask = Task.Run(async () =>
+                {
+                    await instService.AtualizarArquivoAsync();
+                    instProg.Report(100);
+                });
+
+                if (backupTask != null && backupTask.Status != TaskStatus.Created)
+                {
+                    uploadProg.Report(-1);
+                    backupTask = backupTask.ContinueWith(t =>
+                    {
+                        uploadProg.Report(100);
+                        return t.Result;
+                    });
+                }
+                else
+                {
+                    uploadProg.Report(100);
+                }
+
                 await Task.WhenAll(downloadTask, instalacaoTask, backupTask);
                 _manutencoes.ClearData();
 

@@ -109,16 +109,24 @@ namespace OrganizadorArquivosWPF.Services
 
         public async Task StartAsync(IProgress<int> progress)
         {
-
             _progress = progress;
+
+            var multi = new Utils.MultiProgress(progress, 5); // 4 arquivos de manutenção + instalação
+            var manutProg = multi.NextSegment(4);
+            var instProg = multi.NextSegment();
+
             try
             {
-                await _manutencoes.ObterDadosAsync(progress);
+                await _manutencoes.ObterDadosAsync(manutProg);
                 _manutencoes.ClearData();
+
+                instProg.Report(-1);
                 await _instalacao.AtualizarArquivoAsync();
+                instProg.Report(100);
             }
             catch { }
-            _manutencoes.StartAutoUpdate(_interval, progress);
+
+            _manutencoes.StartAutoUpdate(_interval);
             _instalacao.StartAutoUpdate(_interval);
         }
 
