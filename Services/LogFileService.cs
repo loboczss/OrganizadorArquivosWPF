@@ -40,7 +40,6 @@ namespace OrganizadorArquivosWPF.Services
                 sb.AppendLine();
                 sb.AppendLine(logger.GetFullLog());
                 File.WriteAllText(logFile, sb.ToString());
-                logger.Info(logtxt + " criado em: " + logFile);
             }
             catch (Exception ex)
             {

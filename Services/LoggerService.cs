@@ -16,6 +16,7 @@ namespace OrganizadorArquivosWPF.Services
         private readonly Dispatcher _dispatcher;
         private readonly object _fileLock = new object();
         private bool _logIoErrorNotified = false;
+        private string _lastMessageKey = string.Empty;
         private const int MaxEntries = 500;
 
         public LoggerService(ObservableCollection<LogEntry> logs, Dispatcher dispatcher)
@@ -35,26 +36,41 @@ namespace OrganizadorArquivosWPF.Services
 
         private void Add(string tipo, string emoji, string mensagem)
         {
-            var entry = new LogEntry(tipo, emoji, mensagem);
+            LogEntry entry = null;
 
-            // Atualiza a UI de forma thread-safe e limita itens em memória
+            // Atualiza a UI de forma thread-safe e evita duplicados
             _dispatcher.Invoke(() =>
             {
-                _logs.Add(entry);
-                if (_logs.Count > MaxEntries)
-                    _logs.RemoveAt(0);
+                var last = _logs.LastOrDefault();
+                if (last != null && last.Tipo == tipo && last.Emoji == emoji && last.Mensagem == mensagem)
+                {
+                    last.Hora = DateTime.Now;
+                    entry = last;
+                }
+                else
+                {
+                    entry = new LogEntry(tipo, emoji, mensagem);
+                    _logs.Add(entry);
+                    if (_logs.Count > MaxEntries)
+                        _logs.RemoveAt(0);
+                }
             });
 
-            // Grava em disco de forma thread-safe
+            // Grava em disco de forma thread-safe (ignora duplicados)
             lock (_fileLock)
             {
                 try
                 {
                     var texto = string.IsNullOrEmpty(emoji)
-                        ? entry.Mensagem
-                        : emoji + " " + entry.Mensagem;
-                    File.AppendAllText(_logFilePath,
-                        $"{entry.Hora:yyyy-MM-dd HH:mm:ss} [{entry.Tipo}] {texto}{Environment.NewLine}");
+                        ? mensagem
+                        : emoji + " " + mensagem;
+                    var key = tipo + ":" + texto;
+                    if (_lastMessageKey != key)
+                    {
+                        File.AppendAllText(_logFilePath,
+                            $"{entry.Hora:yyyy-MM-dd HH:mm:ss} [{tipo}] {texto}{Environment.NewLine}");
+                        _lastMessageKey = key;
+                    }
                     _logIoErrorNotified = false;
                 }
                 catch (IOException ex)
