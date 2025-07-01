@@ -12,7 +12,7 @@ using System.Windows;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("OrganizadorArquivosWPF")]
-[assembly: AssemblyCopyright("One Engenharia ©  2025")]
+[assembly: AssemblyCopyright("One Engenharia © 2025")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

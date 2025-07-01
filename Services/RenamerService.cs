@@ -14,7 +14,7 @@ using OrganizadorArquivosWPF.Models;
 namespace OrganizadorArquivosWPF.Services
 {
     /// <summary>
-    /// Renomeia, move e registra arquivos (compatível C# 7.3 / .NET 4.x).
+    /// Renomeia, move e registra arquivos
     /// Esta versão mantém 100 % da funcionalidade original, mas tem pequenas otimizações
     /// de desempenho, legibilidade e resiliência.
     /// </summary>
