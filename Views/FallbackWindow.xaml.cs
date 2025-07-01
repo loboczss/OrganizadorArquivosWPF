@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using OrganizadorArquivosWPF.Models;
+using OrganizadorArquivosWPF.Services;
 
 namespace OrganizadorArquivosWPF.Views
 {
@@ -28,6 +29,7 @@ namespace OrganizadorArquivosWPF.Views
         private readonly IList<ClientRecord> _records;
         // Indica que o ID pode ser digitado livremente (sem busca)
         private readonly bool _allowAnyId;
+        private readonly InstalacaoService _instalacaoService = new InstalacaoService();
 
         public FallbackWindow(string osFull,
                               IEnumerable<string> rotas,
@@ -190,11 +192,52 @@ namespace OrganizadorArquivosWPF.Views
                 return;
             }
 
-            // Quando cumprido o mínimo, inicia busca assíncrona (modo normal)
+            // Quando cumprido o mínimo, inicia busca assíncrona
             if (_allowAnyId)
             {
-                LblCliente.Content = "Modo manual - cliente não verificado.";
-                ClienteEncontrado = null;
+                Validate();
+                LblCliente.Content = "Buscando cliente...";
+                try
+                {
+                    var resultado = await Task.Run(() => _instalacaoService.BuscarPorIdSigfi(texto));
+                    if (resultado.HasValue)
+                    {
+                        ClienteEncontrado = resultado.Value.NomeCliente;
+                        LblCliente.Content = $"Cliente: {ClienteEncontrado}";
+                        var rotaEncontrada = resultado.Value.Rota;
+                        Rota = rotaEncontrada;
+                        bool achou = false;
+                        foreach (ComboBoxItem item in CmbRota.Items)
+                        {
+                            if (string.Equals(item.Content.ToString(), rotaEncontrada, StringComparison.OrdinalIgnoreCase))
+                            {
+                                CmbRota.SelectedItem = item;
+                                achou = true;
+                                break;
+                            }
+                        }
+                        if (!achou && !string.IsNullOrEmpty(rotaEncontrada))
+                        {
+                            var novo = new ComboBoxItem { Content = rotaEncontrada };
+                            CmbRota.Items.Add(novo);
+                            CmbRota.SelectedItem = novo;
+                        }
+                    }
+                    else
+                    {
+                        ClienteEncontrado = null;
+                        LblCliente.Content = "Cliente não encontrado.";
+                        Rota = string.Empty;
+                        CmbRota.SelectedIndex = -1;
+                    }
+                }
+                catch
+                {
+                    ClienteEncontrado = null;
+                    LblCliente.Content = "Erro ao buscar cliente.";
+                    Rota = string.Empty;
+                    CmbRota.SelectedIndex = -1;
+                }
                 Validate();
             }
             else
