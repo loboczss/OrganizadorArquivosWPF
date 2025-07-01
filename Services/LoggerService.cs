@@ -50,6 +50,7 @@ namespace OrganizadorArquivosWPF.Services
                 else
                 {
                     entry = new LogEntry(tipo, emoji, mensagem);
+
                     _logs.Add(entry);
                     if (_logs.Count > MaxEntries)
                         _logs.RemoveAt(0);
