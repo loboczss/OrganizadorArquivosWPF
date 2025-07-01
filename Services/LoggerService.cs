@@ -37,12 +37,25 @@ namespace OrganizadorArquivosWPF.Services
         {
             var entry = new LogEntry(tipo, emoji, mensagem);
 
-            // Atualiza a UI de forma thread-safe e limita itens em memória
+            // Atualiza a UI apenas para mensagens importantes e evita duplicados
             _dispatcher.Invoke(() =>
             {
-                _logs.Add(entry);
-                if (_logs.Count > MaxEntries)
-                    _logs.RemoveAt(0);
+                if (tipo != "INFO")
+                {
+                    if (_logs.Count > 0)
+                    {
+                        var last = _logs[^1];
+                        if (last.Tipo == tipo && last.Mensagem == mensagem && last.Emoji == emoji)
+                        {
+                            last.Hora = entry.Hora;
+                            return;
+                        }
+                    }
+
+                    _logs.Add(entry);
+                    if (_logs.Count > MaxEntries)
+                        _logs.RemoveAt(0);
+                }
             });
 
             // Grava em disco de forma thread-safe
