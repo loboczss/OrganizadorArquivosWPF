@@ -77,6 +77,9 @@ namespace OrganizadorArquivosWPF
             {
                 RunUpdaterExe();
                 Shutdown();
+                // Garante que o processo finalize para evitar erros na
+                // substituição dos arquivos durante a atualização
+                Environment.Exit(0);
                 return;
             }
 

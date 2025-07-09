@@ -484,6 +484,11 @@ namespace OrganizadorArquivosWPF
             });
 
             await Task.Delay(500);
+
+            // Permite o fechamento da janela e encerra o aplicativo
+            AllowClose = true;
+            Application.Current?.Shutdown();
+            Environment.Exit(0);
         }
 
         private void BtnSelecionar_Click(object sender, RoutedEventArgs e)
