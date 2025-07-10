@@ -75,10 +75,8 @@ namespace OrganizadorArquivosWPF
             bool? wantsUpdate = updatePrompt.ShowDialog();
             if (wantsUpdate == true && updatePrompt.ShouldUpdate)
             {
-                RunUpdaterExe();
+                await RunUpdateAsync();
                 Shutdown();
-                // Garante que o processo finalize para evitar erros na
-                // substituição dos arquivos durante a atualização
                 Environment.Exit(0);
                 return;
             }
@@ -96,27 +94,17 @@ namespace OrganizadorArquivosWPF
         }
 
 
-        private void RunUpdaterExe()
+        private async Task RunUpdateAsync()
         {
-            string exePath = Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory,
-                "atualiza",
-                "AtualizadorApp.Wpf.exe");
-
-            if (!System.IO.File.Exists(exePath))
+            var service = new AtualizadorService();
+            var file = await service.DownloadLatestReleaseAsync();
+            if (file == null)
             {
-                MessageBox.Show(
-                    $"Arquivo de atualização não encontrado:\n{exePath}",
-                    "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Arquivo de atualização não encontrado.", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
-
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = exePath,
-                UseShellExecute = true,
-                WorkingDirectory = Path.GetDirectoryName(exePath)
-            });
+            var batch = service.CreateUpdateBatch(file);
+            Process.Start(new ProcessStartInfo(batch) { UseShellExecute = true });
         }
 
         private void EnsureRunAtStartup()
