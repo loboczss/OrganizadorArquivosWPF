@@ -1,17 +1,18 @@
-using Microsoft.Extensions.Hosting;
-using SyncWorker;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SyncWorker;
 
-var builder = Host.CreateApplicationBuilder(args);
-builder.Services.AddHostedService<Worker>();
+IHost host = Host.CreateDefaultBuilder(args)
+    .UseWindowsService()
+    .ConfigureServices((context, services) =>
+    {
+        services.AddHostedService<Worker>();
+        services.Configure<HostOptions>(options =>
+        {
+            options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
+        });
+    })
+    .Build();
 
-builder.Services.Configure<HostOptions>(o =>
-{
-    o.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
-});
-
-builder.UseWindowsService();
-
-var host = builder.Build();
 host.Run();
