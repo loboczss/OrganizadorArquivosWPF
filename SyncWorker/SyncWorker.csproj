@@ -11,5 +11,6 @@
   <ItemGroup>
     <ProjectReference Include="../OrganizadorArquivosWPF.csproj" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
   </ItemGroup>
 </Project>
