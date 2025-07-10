@@ -20,7 +20,7 @@ namespace OrganizadorArquivosWPF.Services
         // A primeira sincronização já ocorre na tela splash. Por isso, a
         // próxima tentativa de download só deve acontecer após 10 minutos.
         private readonly TimeSpan _interval = TimeSpan.FromMinutes(10);
-        private IProgress<int> _progress;
+        private IProgress<double> _progress;
         private LoggerService _log => LoggerService.Instance;
 
         public TrayService()
@@ -109,7 +109,7 @@ namespace OrganizadorArquivosWPF.Services
             _icon.ContextMenuStrip = menu;
         }
 
-        public async Task StartAsync(IProgress<int> progress)
+        public async Task StartAsync(IProgress<double> progress)
         {
             _progress = progress;
             var tracker = new Utils.ProgressTracker(progress, 2);

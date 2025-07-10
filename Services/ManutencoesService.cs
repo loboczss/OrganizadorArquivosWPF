@@ -35,7 +35,7 @@ namespace OrganizadorArquivosWPF.Services
         private JArray _dados = new JArray();
         private List<ClientRecord> _records = new List<ClientRecord>();
         private Timer _timer;
-        private IProgress<int> _timerProgress;
+        private IProgress<double> _timerProgress;
         private bool _executandoAtualizacao;
         private static LoggerService _log => LoggerService.Instance;
 
@@ -65,7 +65,7 @@ namespace OrganizadorArquivosWPF.Services
             }
         }
 
-        public async Task<JArray> ObterDadosAsync(IProgress<int> progress = null)
+        public async Task<JArray> ObterDadosAsync(IProgress<double> progress = null)
         {
             progress?.Report(0);
             bool fromInternet = false;
@@ -124,7 +124,7 @@ namespace OrganizadorArquivosWPF.Services
         }
 
         private async Task<Dictionary<string, string>> BaixarUltimosArquivosManutencaoAsync(
-            IProgress<int> progress, int maxTentativas = 3)
+            IProgress<double> progress, int maxTentativas = 3)
         {
             for (int tentativa = 1; tentativa <= maxTentativas; tentativa++)
             {
@@ -169,7 +169,7 @@ namespace OrganizadorArquivosWPF.Services
             }
         }
 
-        private async Task<Dictionary<string, string>> BaixarArquivosSharePointInternoAsync(IProgress<int> progress)
+        private async Task<Dictionary<string, string>> BaixarArquivosSharePointInternoAsync(IProgress<double> progress)
         {
             string driveId = await ObterDriveIdAsync();
 
@@ -202,7 +202,7 @@ namespace OrganizadorArquivosWPF.Services
                 {
                     _log.Warning($"Não encontrou arquivo para '{padrao}'.");
                     concluidos++;
-                    progress?.Report(concluidos * 100 / totalEtapas);
+                    progress?.Report(concluidos * 100.0 / totalEtapas);
                     continue;
                 }
 
@@ -226,7 +226,7 @@ namespace OrganizadorArquivosWPF.Services
                 finally
                 {
                     concluidos++;
-                    progress?.Report(concluidos * 100 / totalEtapas);
+                    progress?.Report(concluidos * 100.0 / totalEtapas);
                 }
             }
 
@@ -334,7 +334,7 @@ namespace OrganizadorArquivosWPF.Services
             }
         }
 
-        public async Task<List<ClientRecord>> ObterClientRecordsAsync(IProgress<int> p = null)
+        public async Task<List<ClientRecord>> ObterClientRecordsAsync(IProgress<double> p = null)
         {
             await ObterDadosAsync(p);
             return new List<ClientRecord>(_records);
@@ -364,7 +364,7 @@ namespace OrganizadorArquivosWPF.Services
             }
         }
 
-        public void StartAutoUpdate(TimeSpan interval, IProgress<int> p = null)
+        public void StartAutoUpdate(TimeSpan interval, IProgress<double> p = null)
         {
             if (_timer != null) return;
 

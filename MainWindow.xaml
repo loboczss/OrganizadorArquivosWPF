@@ -302,6 +302,8 @@
                             </Grid.ColumnDefinitions>
                             <ProgressBar x:Name="Progress" Grid.Column="0" Height="18"
                                          IsIndeterminate="false" Visibility="Collapsed" Value="0"/>
+                            <TextBlock x:Name="ProgressPercentText" Grid.Column="1" Margin="8,0,0,0"
+                                       VerticalAlignment="Center" Visibility="Collapsed"/>
                         </Grid>
                     </Grid>
                 </Border>

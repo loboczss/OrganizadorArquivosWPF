@@ -30,19 +30,23 @@ namespace OrganizadorArquivosWPF
         private const string PastaDefaultNome = "SALVAR AQUI";
 
         #region Progresso UI
-        private sealed class BarProgress : IProgress<int>
+        private sealed class BarProgress : IProgress<double>
         {
             private readonly MainWindow _wnd;
             public BarProgress(MainWindow wnd) => _wnd = wnd;
-            public void Report(int value)
-                => _wnd.Dispatcher.Invoke(() => _wnd.Progress.Value = value);
+            public void Report(double value)
+                => _wnd.Dispatcher.Invoke(() =>
+                {
+                    _wnd.Progress.Value = value;
+                    _wnd.ProgressPercentText.Text = $"{value:0.#}%";
+                });
         }
 
-        private sealed class DownloadProgress : IProgress<int>
+        private sealed class DownloadProgress : IProgress<double>
         {
             private readonly MainWindow _wnd;
             public DownloadProgress(MainWindow wnd) => _wnd = wnd;
-            public void Report(int value)
+            public void Report(double value)
             {
                 _wnd.Dispatcher.Invoke(() =>
                 {
@@ -66,7 +70,7 @@ namespace OrganizadorArquivosWPF
                             _wnd.DownloadBar.Visibility = Visibility.Visible;
                         _wnd.DownloadBar.IsIndeterminate = false;
                         _wnd.DownloadBar.Value = value;
-                        _wnd.TxtSyncStatus.Text = $"Baixando dados ({value}%)";
+                        _wnd.TxtSyncStatus.Text = $"Baixando dados ({value:0.#}%)";
                     }
                 });
             }
@@ -236,7 +240,7 @@ namespace OrganizadorArquivosWPF
                         int total = _cachedRecords.Count;
                         for (int i = 0; i < total; i++)
                         {
-                            reporter.Report((int)((i + 1) * 100.0 / total));
+                            reporter.Report((i + 1) * 100.0 / total);
                             var r = _cachedRecords[i];
                             if (r.NumOS.Equals(fullOS, StringComparison.OrdinalIgnoreCase))
                                 return r;
@@ -363,7 +367,12 @@ namespace OrganizadorArquivosWPF
         {
             BtnProcessar.IsEnabled = !ativo;
             Progress.Visibility = ativo ? Visibility.Visible : Visibility.Collapsed;
-            if (!ativo) Progress.Value = 0;
+            ProgressPercentText.Visibility = ativo ? Visibility.Visible : Visibility.Collapsed;
+            if (!ativo)
+            {
+                Progress.Value = 0;
+                ProgressPercentText.Text = "0%";
+            }
         }
 
         private void DefinirPastaPadrao()
@@ -387,6 +396,9 @@ namespace OrganizadorArquivosWPF
             Progress.Maximum = 100;
             Progress.IsIndeterminate = false;
             Progress.Visibility = Visibility.Collapsed;
+            ProgressPercentText.Visibility = Visibility.Collapsed;
+            Progress.Value = 0;
+            ProgressPercentText.Text = "0%";
         }
 
         private void ConfigurarDownloadBar()
