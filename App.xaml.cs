@@ -174,6 +174,18 @@ namespace OrganizadorArquivosWPF
                                 Utils.WindowHelper.SetForegroundWindow(handle);
                             }
                         }
+                        else
+                        {
+                            var login = new LoginWindow();
+                            bool? loginOk = login.ShowDialog();
+                            if (loginOk == true)
+                            {
+                                UsuarioRecord user = login.Usuario;
+                                var newMain = new MainWindow(user);
+                                Current.MainWindow = newMain;
+                                newMain.Show();
+                            }
+                        }
                     });
                 }
             });
