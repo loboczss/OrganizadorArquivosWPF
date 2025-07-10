@@ -51,9 +51,9 @@ namespace OrganizadorArquivosWPF
             var trayTask = _tray.StartAsync(tracker.NextSegment()).WaitAsync(cts.Token);
 
             splash.SetStatus("Baixando planilha de funcionários...");
-            splash.SetProgress(-1);
             var funcService = new FuncionariosService();
             var funcSeg = tracker.NextSegment();
+            funcSeg.Report(0);
             var funcTask = Task.Run(() => { funcService.ListarTodos(); funcSeg.Report(100); }, cts.Token);
 
             try
