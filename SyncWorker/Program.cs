@@ -1,17 +1,27 @@
-using Microsoft.Extensions.Hosting;
-using SyncWorker;
-using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 
-var builder = Host.CreateApplicationBuilder(args);
-builder.Services.AddHostedService<Worker>();
+using SyncWorker;
 
-builder.Services.Configure<HostOptions>(o =>
+var loggerFactory = LoggerFactory.Create(builder =>
 {
-    o.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
+    builder.AddSimpleConsole(options =>
+    {
+        options.SingleLine = true;
+        options.TimestampFormat = "HH:mm:ss ";
+    });
 });
 
-builder.UseWindowsService();
+var logger = loggerFactory.CreateLogger<Worker>();
 
-var host = builder.Build();
-host.Run();
+using var cts = new CancellationTokenSource();
+
+Console.CancelKeyPress += (s, e) =>
+{
+    e.Cancel = true;
+    cts.Cancel();
+};
+
+var worker = new Worker(logger);
+await worker.RunAsync(cts.Token);
