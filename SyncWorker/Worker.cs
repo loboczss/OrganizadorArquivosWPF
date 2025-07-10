@@ -1,6 +1,11 @@
 using System.IO;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OrganizadorArquivosWPF.Services;
+
 
 namespace SyncWorker;
 

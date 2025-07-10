@@ -6,12 +6,7 @@ using Newtonsoft.Json;
 namespace OrganizadorArquivosWPF.Services
 {
     /// <summary>
-/// Provides access to application configuration values.
-/// Values are read from a JSON file stored under the user's
-        public static readonly string? BackupFolder;
-            BackupFolder = cfg.BackupFolder;
-            public string? BackupFolder { get; set; }
-/// LocalApplicationData folder.ihevjbdvldnbvkeçjbv çkenavmgv
+
     /// </summary>
     public static class Config
     {
@@ -19,6 +14,7 @@ namespace OrganizadorArquivosWPF.Services
         public static readonly string TenantId;
         public static readonly string ClientId;
         public static readonly string ClientSecret;
+        public static readonly string? BackupFolder;
 
         static Config()
         {
@@ -37,6 +33,7 @@ namespace OrganizadorArquivosWPF.Services
             TenantId = cfg.TenantId ?? throw new InvalidOperationException("TenantId missing.");
             ClientId = cfg.ClientId ?? throw new InvalidOperationException("ClientId missing.");
             ClientSecret = cfg.ClientSecret ?? throw new InvalidOperationException("ClientSecret missing.");
+            BackupFolder = cfg.BackupFolder;
         }
 
         private class ConfigFile
@@ -44,6 +41,7 @@ namespace OrganizadorArquivosWPF.Services
             public string? TenantId { get; set; }
             public string? ClientId { get; set; }
             public string? ClientSecret { get; set; }
+            public string? BackupFolder { get; set; }
         }
     }
 }
