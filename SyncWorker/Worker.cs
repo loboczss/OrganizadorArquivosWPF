@@ -1,15 +1,14 @@
-using System.IO;
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OrganizadorArquivosWPF.Services;
 
 
 namespace SyncWorker;
 
-public class Worker : BackgroundService
+public class Worker
 {
     private readonly ILogger<Worker> _logger;
     private readonly ManutencoesService _manutencoes;
@@ -26,7 +25,7 @@ public class Worker : BackgroundService
         _backup = new BackupService();
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public async Task RunAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {
