@@ -4,16 +4,16 @@
 winexe
 C#
 .cs
-D:\BACKUP JUAN 08072025\Dev\OrganizadorArquivosWPF\OrganizadorArquivosWPF\obj\Release\net8.0-windows\
+D:\Dev\OrganizadorArquivosWPF\OrganizadorArquivosWPF\obj\Release\net8.0-windows\
 OrganizadorArquivosWPF
 none
 false
 TRACE;RELEASE;NET;NET8_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER;WINDOWS7_0_OR_GREATER
-D:\BACKUP JUAN 08072025\Dev\OrganizadorArquivosWPF\OrganizadorArquivosWPF\App.xaml
+D:\Dev\OrganizadorArquivosWPF\OrganizadorArquivosWPF\App.xaml
 5423758875
 
 26-958052782
-239203953216
+239503284652
 MainWindow.xaml;Views\FallbackWindow.xaml;Views\LoginWindow.xaml;Views\SplashWindow.xaml;Views\UpdatePromptWindow.xaml;
 
 False

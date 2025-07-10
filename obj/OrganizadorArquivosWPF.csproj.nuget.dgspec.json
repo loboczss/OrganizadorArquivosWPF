@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "D:\\BACKUP JUAN 08072025\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj": {}
+    "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj": {}
   },
   "projects": {
-    "D:\\BACKUP JUAN 08072025\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj": {
+    "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\BACKUP JUAN 08072025\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj",
+        "projectUniqueName": "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj",
         "projectName": "OrganizadorArquivosWPF",
-        "projectPath": "D:\\BACKUP JUAN 08072025\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj",
-        "packagesPath": "C:\\Users\\SALA 001\\.nuget\\packages\\",
-        "outputPath": "D:\\BACKUP JUAN 08072025\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\obj\\",
+        "projectPath": "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF.csproj",
+        "packagesPath": "C:\\Users\\loboczss\\.nuget\\packages\\",
+        "outputPath": "D:\\Dev\\OrganizadorArquivosWPF\\OrganizadorArquivosWPF\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\SALA 001\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\loboczss\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
