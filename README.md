@@ -11,7 +11,8 @@ following content:
 {
   "TenantId": "<your-tenant-id>",
   "ClientId": "<your-client-id>",
-  "ClientSecret": "<your-client-secret>"
+  "ClientSecret": "<your-client-secret>",
+  "BackupFolder": "C:\\Path\\To\\Backup"
 }
 ```
 
@@ -46,6 +47,11 @@ dotnet run
 ```
 
 Alternatively open the `OrganizadorArquivosWPF.csproj` file in Visual Studio and run the project.
+
+### Background Sync Service
+
+The `SyncWorker` project builds a Windows service that synchronizes data every 10 minutes.
+Install the service using `sc create` or similar tools and ensure the `BackupFolder` setting is configured.
 
 ## License
 
