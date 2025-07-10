@@ -345,7 +345,7 @@ public class BackupService
         bool enviarParaNuvem,
         string nomeFuncionario,
         string matriculaFuncionario,
-        IProgress<int>? progress = null)
+        IProgress<double>? progress = null)
     {
         if (string.IsNullOrWhiteSpace(pastaOrigem) || !Directory.Exists(pastaOrigem))
             throw new DirectoryNotFoundException("Pasta de origem inválida para backup.");

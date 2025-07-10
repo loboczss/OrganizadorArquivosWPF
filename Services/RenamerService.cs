@@ -182,14 +182,14 @@ namespace OrganizadorArquivosWPF.Services
             string devDestino,
             string nomeFuncionario,
             string matriculaFuncionario,
-            IProgress<int> progress = null)
+            IProgress<double> progress = null)
         {
             // Task.Run mantém compatibilidade com .NET 4.x (não há async streams etc.)
             return Task.Run(() =>
             {
                 bool isSistema160 = string.Equals(tipoSistema, "SIGFI160", StringComparison.OrdinalIgnoreCase);
-                int pct = 0;
-                void Report(int v) { pct = v; progress?.Report(v); }
+                double pct = 0;
+                void Report(double v) { pct = v; progress?.Report(v); }
 
                 _lastMapping.Clear();
                 Report(0);
@@ -288,7 +288,7 @@ namespace OrganizadorArquivosWPF.Services
                 // Cálculo de progresso (80 % do total, 10 % já foi)
                 int totalSteps = controllers.Count + (inv != null ? 1 : 0) + (bat != null ? 1 : 0) + images.Count + 2;
                 int done = 0;
-                void Step() => Report(10 + (++done * 80 / totalSteps));
+                void Step() => Report(10 + (++done * 80.0 / totalSteps));
 
                 // 8) Função local de mover/renomear
                 Action<string, string> MoveRen = (src, suf) =>

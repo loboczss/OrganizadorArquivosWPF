@@ -43,7 +43,7 @@ namespace OrganizadorArquivosWPF
             splash.Show();
 
             _tray = new TrayService();
-            var progress = new Progress<int>(v => splash.SetProgress(v));
+            var progress = new Progress<double>(v => splash.SetProgress(v));
             var tracker = new Utils.ProgressTracker(progress, 2);
 
             // Executa downloads em paralelo e limita o tempo de espera

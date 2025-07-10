@@ -87,7 +87,7 @@ namespace OrganizadorArquivosWPF.Services
         /// Baixa o arquivo de instalação do SharePoint substituindo
         /// qualquer versão local existente.
         /// </summary>
-        public async Task AtualizarArquivoAsync(IProgress<int>? progress = null)
+        public async Task AtualizarArquivoAsync(IProgress<double>? progress = null)
         {
             try
             {

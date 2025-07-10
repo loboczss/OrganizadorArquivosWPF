@@ -17,7 +17,7 @@ namespace OrganizadorArquivosWPF.Views
             TxtStatus.Text = text;
         }
 
-        public void SetProgress(int value)
+        public void SetProgress(double value)
         {
             if (value < 0)
             {
@@ -30,7 +30,7 @@ namespace OrganizadorArquivosWPF.Views
             Progress.IsIndeterminate = false;
             if (value > 100) value = 100;
             Progress.Value = value;
-            PercentText.Text = $"{value}%";
+            PercentText.Text = $"{value:0.#}%";
 
             if (value >= 100)
                 TxtStatus.Text = "Download concluído";
