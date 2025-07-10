@@ -466,26 +466,20 @@ namespace OrganizadorArquivosWPF
 
         private async Task RunUpdateAsync()
         {
-            var exePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
-                                       "atualiza",
-                                       "AtualizadorApp.Wpf.exe");
-            if (!File.Exists(exePath))
+            var service = new AtualizadorService();
+            var file = await service.DownloadLatestReleaseAsync();
+            if (file == null)
             {
-                System.Windows.MessageBox.Show($"Arquivo de atualização não encontrado:\n{exePath}",
+                System.Windows.MessageBox.Show("Arquivo de atualização não encontrado.",
                                 "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = exePath,
-                UseShellExecute = true,
-                WorkingDirectory = Path.GetDirectoryName(exePath)
-            });
+            var batch = service.CreateUpdateBatch(file);
+            Process.Start(new ProcessStartInfo(batch) { UseShellExecute = true });
 
             await Task.Delay(500);
 
-            // Permite o fechamento da janela e encerra o aplicativo
             AllowClose = true;
             Application.Current?.Shutdown();
             Environment.Exit(0);
