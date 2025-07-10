@@ -83,10 +83,13 @@ namespace OrganizadorArquivosWPF.Services
                         {
                             try
                             {
-                                var tracker = new Utils.ProgressTracker(_progress, 2);
-                                await _manutencoes.ObterDadosAsync(tracker.NextSegment());
+                                var manProg = new Progress<double>(v => _progress?.Report(v * 0.5));
+                                await _manutencoes.ObterDadosAsync(manProg);
                                 _manutencoes.ClearData();
-                                await _instalacao.AtualizarArquivoAsync(tracker.NextSegment());
+
+                                var instProg = new Progress<double>(v => _progress?.Report(50 + v * 0.5));
+                                await _instalacao.AtualizarArquivoAsync(instProg);
+
                                 _progress?.Report(100);
                             }
                             catch (Exception ex) { _log.Error($"Download manual: {ex.Message}"); }
@@ -112,16 +115,20 @@ namespace OrganizadorArquivosWPF.Services
         public async Task StartAsync(IProgress<double> progress)
         {
             _progress = progress;
-            var tracker = new Utils.ProgressTracker(progress, 2);
             try
             {
-                await _manutencoes.ObterDadosAsync(tracker.NextSegment());
+                var manProg = new Progress<double>(v => progress?.Report(v * 0.5));
+                await _manutencoes.ObterDadosAsync(manProg);
                 _manutencoes.ClearData();
-                await _instalacao.AtualizarArquivoAsync(tracker.NextSegment());
+
+                var instProg = new Progress<double>(v => progress?.Report(50 + v * 0.5));
+                await _instalacao.AtualizarArquivoAsync(instProg);
+
                 progress?.Report(100);
             }
             catch { }
-            _manutencoes.StartAutoUpdate(_interval, progress);
+
+            _manutencoes.StartAutoUpdate(_interval, null);
             _instalacao.StartAutoUpdate(_interval);
         }
 
