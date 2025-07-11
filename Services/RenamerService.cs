@@ -125,6 +125,34 @@ namespace OrganizadorArquivosWPF.Services
             Directory.CreateDirectory(destino);
             return destino;
         }
+
+        /// <summary>
+        /// Obtém todas as pastas base existentes utilizadas pelo renomeador
+        /// tanto para AC quanto para MT, além da pasta "OrganizadorArquivos"
+        /// em Documentos, se houver.
+        /// </summary>
+        public static IEnumerable<string> EnumerarPastasBase()
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var raiz = Path.Combine(home, RaizOneEng);
+
+            IEnumerable<string> Enumerar(string mask) =>
+                Enumerable.Range(1, 100)
+                          .Select(n => Path.Combine(raiz, string.Format(mask, n)))
+                          .Where(Directory.Exists);
+
+            foreach (var dir in Enumerar("ONE Engenharia - Clientes PC ONE {0:D3}"))
+                yield return dir;
+
+            foreach (var dir in Enumerar("ONE Engenharia - LOGIN_W_{0:D3}_R_MT"))
+                yield return dir;
+
+            var docs = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "OrganizadorArquivos");
+            if (Directory.Exists(docs))
+                yield return docs;
+        }
         #endregion
 
         #region Classificação de Arquivos
