@@ -46,23 +46,28 @@ namespace OrganizadorArquivosWPF
             var progress = new Progress<double>(v => splash.SetProgress(v));
             var tracker = new Utils.ProgressTracker(progress, 2);
 
-            // Executa downloads em paralelo e limita o tempo de espera
+            // Executa downloads sequenciais com tempo limite
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-            var trayTask = _tray.StartAsync(tracker.NextSegment()).WaitAsync(cts.Token);
+            try
+            {
+                await _tray.StartAsync(tracker.NextSegment()).WaitAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // Continua mesmo que o download exceda o tempo limite
+            }
 
             splash.SetStatus("Baixando planilha de funcionários...");
             var funcService = new FuncionariosService();
             var funcSeg = tracker.NextSegment();
-            funcSeg.Report(0);
-            var funcTask = Task.Run(() => { funcService.ListarTodos(); funcSeg.Report(100); }, cts.Token);
-
             try
             {
-                await Task.WhenAll(trayTask, funcTask);
+                funcSeg.Report(0);
+                await Task.Run(() => { funcService.ListarTodos(); funcSeg.Report(100); }, cts.Token);
             }
             catch (OperationCanceledException)
             {
-                // Continua mesmo que alguma tarefa exceda o tempo limite
+                // Ignora caso o download da planilha demore demais
             }
 
             // Salva versão antes de seguir para o prompt de atualização
