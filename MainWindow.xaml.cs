@@ -85,6 +85,7 @@ namespace OrganizadorArquivosWPF
         private ManutencoesService _manutencoes;
         private BackupService _backup;
         private List<ClientRecord> _cachedRecords;
+        private Dictionary<string, ClientRecord> _recordsByOs;
         private readonly ObservableCollection<LogEntry> _logs;
         private readonly DownloadProgress _downloadReporter;
         private LogEntry _lastUpdateEntry;
@@ -163,6 +164,7 @@ namespace OrganizadorArquivosWPF
 
             // Carrega rapidamente registros do cache local (sem novo download)
             _cachedRecords = await Task.Run(() => _manutencoes.LoadCachedRecords());
+            BuildRecordIndex();
 
             // 2) Atualiza status de sincronização
             await AtualizarStatusSincronizacaoAsync();
@@ -235,18 +237,8 @@ namespace OrganizadorArquivosWPF
             {
                 try
                 {
-                    record = await Task.Run(() =>
-                    {
-                        int total = _cachedRecords.Count;
-                        for (int i = 0; i < total; i++)
-                        {
-                            reporter.Report((i + 1) * 100.0 / total);
-                            var r = _cachedRecords[i];
-                            if (r.NumOS.Equals(fullOS, StringComparison.OrdinalIgnoreCase))
-                                return r;
-                        }
-                        return null;
-                    });
+                    _recordsByOs?.TryGetValue(fullOS, out record);
+                    reporter.Report(100);
                 }
                 catch (Exception ex)
                 {
@@ -407,6 +399,14 @@ namespace OrganizadorArquivosWPF
             DownloadBar.Maximum = 100;
             DownloadBar.IsIndeterminate = false;
             DownloadBar.Visibility = Visibility.Collapsed;
+        }
+
+        private void BuildRecordIndex()
+        {
+            _recordsByOs = _cachedRecords?
+                .GroupBy(r => r.NumOS, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase)
+                ?? new Dictionary<string, ClientRecord>(StringComparer.OrdinalIgnoreCase);
         }
 
         // ===================== System Tray (Bandeja) ======================
@@ -570,6 +570,7 @@ namespace OrganizadorArquivosWPF
                 if (fromInternet)
                 {
                     _cachedRecords = new List<ClientRecord>(_manutencoes.Records);
+                    BuildRecordIndex();
                     mensagem = $"Dados de manutenção atualizados em {time:HH:mm:ss} — {_cachedRecords.Count} registros carregados.";
                     _manutencoes.ClearData();
                     _log.Info(mensagem);
@@ -582,6 +583,7 @@ namespace OrganizadorArquivosWPF
                         (DateTime.Now - cacheTime.Value).TotalDays >= 1;
 
                     _cachedRecords = new List<ClientRecord>(_manutencoes.Records);
+                    BuildRecordIndex();
 
                     if (cacheVelho)
                     {
