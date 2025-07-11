@@ -336,6 +336,49 @@ public class BackupService
         return resultados;
     }
 
+    /// <summary>
+    /// Sincroniza todas as pastas de datalog presentes no diretório raiz
+    /// enviando-as para o SharePoint caso ainda não existam lá.
+    /// </summary>
+    public async Task SincronizarPastasAsync(string diretorioRaiz)
+    {
+        if (string.IsNullOrWhiteSpace(diretorioRaiz) || !Directory.Exists(diretorioRaiz))
+            return;
+
+        string driveId = await ObterDriveIdAsync();
+
+        foreach (var dir in Directory.GetDirectories(diretorioRaiz))
+        {
+            string nome = ExtrairOs(dir) ?? Path.GetFileName(dir);
+            bool exists = true;
+            try
+            {
+                await _graph.Drives[driveId].Root.ItemWithPath(nome).GetAsync();
+            }
+            catch (ApiException ex) when (ex.ResponseStatusCode == (int)HttpStatusCode.NotFound)
+            {
+                exists = false;
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Erro ao verificar pasta '{nome}': {ex.Message}");
+                continue;
+            }
+
+            if (!exists)
+            {
+                try
+                {
+                    await EnviarBackupAsync(dir, nome);
+                }
+                catch (Exception ex)
+                {
+                    _log.Error($"Falha ao sincronizar '{dir}': {ex.Message}");
+                }
+            }
+        }
+    }
+
     public async Task ProcessarBackupAsync(
         string pastaOrigem,
         ClientRecord registro,

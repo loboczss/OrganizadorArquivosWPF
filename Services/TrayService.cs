@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows;
 using System.Windows.Forms;
 using System.Threading.Tasks;
+using System.IO;
 using OrganizadorArquivosWPF;
 
 namespace OrganizadorArquivosWPF.Services
@@ -16,6 +17,7 @@ namespace OrganizadorArquivosWPF.Services
         private readonly NotifyIcon _icon;
         private readonly ManutencoesService _manutencoes;
         private readonly InstalacaoService _instalacao;
+        private readonly BackupService _backup;
         // Intervalo padrão para atualizações automáticas
         // A primeira sincronização já ocorre na tela splash. Por isso, a
         // próxima tentativa de download só deve acontecer após 10 minutos.
@@ -27,6 +29,7 @@ namespace OrganizadorArquivosWPF.Services
         {
             _manutencoes = new ManutencoesService();
             _instalacao = new InstalacaoService();
+            _backup = new BackupService();
 
             var icoPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ico-app.ico");
             _icon = new NotifyIcon
@@ -123,6 +126,19 @@ namespace OrganizadorArquivosWPF.Services
 
                 var instProg = new Progress<double>(v => progress?.Report(50 + v * 0.5));
                 await _instalacao.AtualizarArquivoAsync(instProg);
+
+                if (!string.IsNullOrWhiteSpace(Config.BackupFolder) &&
+                    Directory.Exists(Config.BackupFolder))
+                {
+                    try
+                    {
+                        await _backup.SincronizarPastasAsync(Config.BackupFolder);
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Error($"Backup inicial: {ex.Message}");
+                    }
+                }
 
                 progress?.Report(100);
             }
