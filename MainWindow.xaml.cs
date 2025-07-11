@@ -232,7 +232,7 @@ namespace OrganizadorArquivosWPF
             if (manualMode)
                 _log.Warning("Modo manual ativado");
 
-            ClientRecord record;
+            ClientRecord record = null;
             if (!manualMode)
             {
                 try
