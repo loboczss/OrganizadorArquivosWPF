@@ -28,6 +28,11 @@ public class BackupService
     private readonly LoggerService _log = LoggerService.Instance;
     private string? _driveId;
 
+    private const int DefaultMaxUploadAttempts = 3;
+    private const int BaseRetryDelayMs = 2000;
+    private const int VerificationAttempts = 20;
+    private const int VerificationDelayMs = 5000;
+
     public BackupService()
     {
         var scopes = new[] { "https://graph.microsoft.com/.default" };
@@ -137,7 +142,7 @@ public class BackupService
         string driveId,
         string folderId,
         string file,
-        int maxAttempts = 3)
+        int maxAttempts = DefaultMaxUploadAttempts)
     {
         int attempt = 0;
         while (true)
@@ -153,9 +158,9 @@ public class BackupService
                     throw new IOException(
                         $"Falha ao enviar '{file}' após {attempt} tentativas.", ex);
 
-                _log.Warning(
-                    $"Erro ao enviar '{file}' (tentativa {attempt}): {ex.Message}. Retentando...");
-                await Task.Delay(1000);
+                int wait = (int)Math.Min(30000, BaseRetryDelayMs * Math.Pow(2, attempt - 1));
+                _log.Warning($"Erro ao enviar '{file}' (tentativa {attempt}). Nova tentativa em {wait / 1000}s...");
+                await Task.Delay(wait);
             }
         }
     }
@@ -181,9 +186,10 @@ public class BackupService
         string itemId,
         string expectedHash,
         long expectedSize,
-        int attempts = 10,
-        int delayMs = 3000)
+        int attempts = VerificationAttempts,
+        int delayMs = VerificationDelayMs)
     {
+        bool warned = false;
         for (int i = 0; i < attempts; i++)
         {
             try
@@ -205,11 +211,18 @@ public class BackupService
             }
             catch (Exception ex)
             {
-                _log.Warning($"Falha ao verificar hash: {ex.Message}");
+                if (!warned)
+                {
+                    warned = true;
+                    _log.Warning($"Falha ao verificar hash: {ex.Message}");
+                }
             }
 
             await Task.Delay(delayMs);
         }
+
+        if (warned)
+            _log.Warning("Não foi possível confirmar o hash após várias tentativas.");
 
         return false;
     }
