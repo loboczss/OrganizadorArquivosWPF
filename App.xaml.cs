@@ -64,6 +64,11 @@ namespace OrganizadorArquivosWPF
             {
                 // Continua mesmo que alguma tarefa exceda o tempo limite
             }
+            finally
+            {
+                // Garante que o progresso alcance 100% antes de fechar a splash
+                splash.SetProgress(100);
+            }
 
             // Salva versão antes de seguir para o prompt de atualização
             Versao.GravarVersaoEmTxt();

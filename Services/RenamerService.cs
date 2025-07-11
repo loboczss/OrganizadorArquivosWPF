@@ -32,7 +32,7 @@ namespace OrganizadorArquivosWPF.Services
         // "" = sem extensão (alguns controladores não têm extensão)
         private static readonly HashSet<string> ControlInvBatExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            ".csv", ".xls", ".xlsx", string.Empty
+            ".csv",".txt", ".xls", ".xlsx", string.Empty
         };
 
         // Cache dos caracteres proibidos em nomes de arquivo/pasta

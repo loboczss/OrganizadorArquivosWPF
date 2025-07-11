@@ -12,8 +12,8 @@
       }
     ],
     "additionalProbingPaths": [
-      "C:\\Users\\SALA 001\\.dotnet\\store\\|arch|\\|tfm|",
-      "C:\\Users\\SALA 001\\.nuget\\packages",
+      "C:\\Users\\loboczss\\.dotnet\\store\\|arch|\\|tfm|",
+      "C:\\Users\\loboczss\\.nuget\\packages",
       "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
     ],
     "configProperties": {
