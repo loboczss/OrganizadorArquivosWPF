@@ -55,6 +55,11 @@ When pressing **Sincronizar Tudo** in the application, all local folders created
 The `SyncWorker` project builds a Windows service that synchronizes data every 10 minutes.
 Install the service using `sc create` or similar tools and ensure the `BackupFolder` setting is configured.
 
+### Reliable Backup
+
+Backup uploads now retry automatically using an exponential backoff strategy and
+verify file integrity on SharePoint for up to several minutes.
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
