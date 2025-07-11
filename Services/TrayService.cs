@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using System.Threading.Tasks;
 using System.IO;
 using OrganizadorArquivosWPF;
+using OrganizadorArquivosWPF.Utils;
 
 namespace OrganizadorArquivosWPF.Services
 {
@@ -86,12 +87,11 @@ namespace OrganizadorArquivosWPF.Services
                         {
                             try
                             {
-                                var manProg = new Progress<double>(v => _progress?.Report(v * 0.5));
-                                await _manutencoes.ObterDadosAsync(manProg);
+                                var tracker = new Utils.ProgressTracker(_progress, 2);
+                                await _manutencoes.ObterDadosAsync(tracker.NextSegment());
                                 _manutencoes.ClearData();
 
-                                var instProg = new Progress<double>(v => _progress?.Report(50 + v * 0.5));
-                                await _instalacao.AtualizarArquivoAsync(instProg);
+                                await _instalacao.AtualizarArquivoAsync(tracker.NextSegment());
 
                                 _progress?.Report(100);
                             }
@@ -120,12 +120,11 @@ namespace OrganizadorArquivosWPF.Services
             _progress = progress;
             try
             {
-                var manProg = new Progress<double>(v => progress?.Report(v * 0.5));
-                await _manutencoes.ObterDadosAsync(manProg);
+                var tracker = new Utils.ProgressTracker(progress, 2);
+                await _manutencoes.ObterDadosAsync(tracker.NextSegment());
                 _manutencoes.ClearData();
 
-                var instProg = new Progress<double>(v => progress?.Report(50 + v * 0.5));
-                await _instalacao.AtualizarArquivoAsync(instProg);
+                await _instalacao.AtualizarArquivoAsync(tracker.NextSegment());
 
                 if (!string.IsNullOrWhiteSpace(Config.BackupFolder) &&
                     Directory.Exists(Config.BackupFolder))
