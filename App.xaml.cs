@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using Microsoft.Win32;
-using IWshRuntimeLibrary;
 using OrganizadorArquivosWPF.Services;
 using OrganizadorArquivosWPF.Models;
 using OrganizadorArquivosWPF.Views;
@@ -103,7 +103,6 @@ namespace OrganizadorArquivosWPF
             }
         }
 
-
         private async Task RunUpdateAsync()
         {
             var service = new AtualizadorService();
@@ -123,24 +122,34 @@ namespace OrganizadorArquivosWPF
             {
                 var runKey = Registry.CurrentUser.OpenSubKey(
                     "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
+
                 var exe = Environment.ProcessPath ??
-                          System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ??
-                          System.Reflection.Assembly.GetExecutingAssembly().Location;
+                          Process.GetCurrentProcess().MainModule?.FileName ??
+                          Assembly.GetExecutingAssembly().Location;
+
                 runKey?.SetValue("OrganizadorArquivosWPF", '"' + exe + '"');
                 runKey?.Close();
 
+                // Cria atalho na pasta de inicialização
                 string startupFolder = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
                 string shortcutPath = Path.Combine(startupFolder, "OrganizadorArquivosWPF.lnk");
-                if (!System.IO.File.Exists(shortcutPath))
+
+                if (!File.Exists(shortcutPath))
                 {
-                    var shell = new WshShell();
-                    IWshShortcut shortcut = (IWshShortcut)shell.CreateShortcut(shortcutPath);
+                    Type shellType = Type.GetTypeFromProgID("WScript.Shell");
+                    if (shellType == null) return;
+
+                    dynamic shell = Activator.CreateInstance(shellType);
+                    dynamic shortcut = shell.CreateShortcut(shortcutPath);
                     shortcut.TargetPath = exe;
                     shortcut.WorkingDirectory = Path.GetDirectoryName(exe);
                     shortcut.Save();
                 }
             }
-            catch { /* ignore registry errors */ }
+            catch
+            {
+                // Ignora erros de criação de atalho
+            }
         }
 
         protected override void OnExit(ExitEventArgs e)

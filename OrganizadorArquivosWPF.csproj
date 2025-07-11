@@ -1,42 +1,44 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <UseWPF>true</UseWPF>
-    <ApplicationIcon>ico-app.ico</ApplicationIcon>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-	  
-  </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Azure.Core" Version="1.46.2" />
-    <PackageReference Include="Azure.Identity" Version="1.14.1" />
-    <PackageReference Include="Dropbox.Api" Version="7.0.0" />
-    <PackageReference Include="Microsoft.Graph" Version="5.83.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
-  </ItemGroup>
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<UseWPF>true</UseWPF>
+		<ApplicationIcon>ico-app.ico</ApplicationIcon>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+
+		<!-- Publicação como EXE único e independente -->
+		<SelfContained>true</SelfContained>
+		<PublishSingleFile>true</PublishSingleFile>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+		<PublishTrimmed>false</PublishTrimmed>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="config.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<PackageReference Include="Azure.Core" Version="1.46.2" />
+		<PackageReference Include="Azure.Identity" Version="1.14.1" />
+		<PackageReference Include="Dropbox.Api" Version="7.0.0" />
+		<PackageReference Include="Microsoft.Graph" Version="5.83.0" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+		<PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<Compile Remove="SyncWorker\**\*.cs" />
 	</ItemGroup>
 
-
 	<ItemGroup>
-    <None Include="App.config" />
-    <Resource Include="logo.png" />
-    <Resource Include="ico-app.ico" />
-  </ItemGroup>
+		<None Include="App.config" />
+		<Resource Include="logo.png" />
+		<Resource Include="ico-app.ico" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <COMReference Include="IWshRuntimeLibrary">
-      <Guid>{F935DC20-1CF0-11D0-ADB9-00C04FD58A0B}</Guid>
-      <VersionMajor>1</VersionMajor>
-      <VersionMinor>0</VersionMinor>
-      <Lcid>0</Lcid>
-      <WrapperTool>tlbimp</WrapperTool>
-      <Isolated>False</Isolated>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </COMReference>
-  </ItemGroup>
+	<!-- ❌ REMOVIDO: COMReference que quebra o publish -->
+	<!-- Se precisar criar atalho, recomendo fazer com C# puro ou via PowerShell no instalador -->
+
 </Project>

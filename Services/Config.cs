@@ -18,9 +18,7 @@ namespace OrganizadorArquivosWPF.Services
 
         static Config()
         {
-            var dir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "OneEngRenamer", "OrganizadorArquivosWPF");
+            var dir = AppDomain.CurrentDomain.BaseDirectory;
             var file = Path.Combine(dir, "config.json");
 
             if (!File.Exists(file))

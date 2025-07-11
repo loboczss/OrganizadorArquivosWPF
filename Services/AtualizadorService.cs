@@ -1,11 +1,12 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 
 namespace OrganizadorArquivosWPF.Services
 {
@@ -20,26 +21,49 @@ namespace OrganizadorArquivosWPF.Services
 
         public async Task<(Version LocalVersion, Version RemoteVersion)> GetVersionsAsync()
         {
-            // 1) Versão local
-            Version localVer = new Version(0, 0, 0, 0);
-            // A partir da versão com .NET 8 self-contained o executável é
-            // apenas um host nativo e a DLL contém os metadados reais.
-            var dllPath = Path.Combine(InstallDir, "OrganizadorArquivosWPF.dll");
-            var exePath = Path.Combine(InstallDir, "OrganizadorArquivosWPF.exe");
+            Version dllVer = new Version(0, 0, 0, 0);
+            Version exeVer = new Version(0, 0, 0, 0);
+            Version txtVer = new Version(0, 0, 0, 0);
 
-            string asmPath = File.Exists(dllPath) ? dllPath : exePath;
+            string dllPath = Path.Combine(InstallDir, "OrganizadorArquivosWPF.dll");
+            string exePath = Path.Combine(InstallDir, "OrganizadorArquivosWPF.exe");
+            string txtPath = Path.Combine(InstallDir, "versao.txt");
 
-            if (File.Exists(asmPath))
+            // DLL
+            if (File.Exists(dllPath))
             {
                 try
                 {
-                    localVer = AssemblyName.GetAssemblyName(asmPath).Version;
+                    dllVer = AssemblyName.GetAssemblyName(dllPath).Version;
                 }
-                catch (BadImageFormatException)
-                {
-                    // Executável não possui metadados (ex: host nativo). Mantém versão padrão.
-                }
+                catch { }
             }
+
+            // EXE
+            if (File.Exists(exePath))
+            {
+                try
+                {
+                    exeVer = FileVersionInfo.GetVersionInfo(exePath)?.FileVersion is string str &&
+                             Version.TryParse(str, out var parsed) ? parsed : exeVer;
+                }
+                catch { }
+            }
+
+            // versao.txt
+            if (File.Exists(txtPath))
+            {
+                try
+                {
+                    var content = File.ReadAllText(txtPath).Trim();
+                    if (Version.TryParse(content, out var parsed))
+                        txtVer = parsed;
+                }
+                catch { }
+            }
+
+            // Escolhe a maior versão local entre as 3
+            Version localVer = new[] { dllVer, exeVer, txtVer }.Max();
 
             // 2) Versão remota
             Version remoteVer = localVer;
