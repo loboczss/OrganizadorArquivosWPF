@@ -379,6 +379,55 @@ public class BackupService
         }
     }
 
+    /// <summary>
+    /// Procura recursivamente por pastas de OS dentro das pastas de renomeação
+    /// (AC, MT ou Documentos) e envia para o SharePoint caso ainda não existam.
+    /// </summary>
+    public async Task SincronizarPastasRenomeacaoAsync()
+    {
+        string driveId = await ObterDriveIdAsync();
+
+        foreach (var baseDir in RenamerService.EnumerarPastasBase())
+        {
+            if (!Directory.Exists(baseDir))
+                continue;
+
+            foreach (var dir in Directory.GetDirectories(baseDir, "*", SearchOption.AllDirectories))
+            {
+                var nome = ExtrairOs(dir);
+                if (string.IsNullOrWhiteSpace(nome))
+                    continue;
+
+                bool exists = true;
+                try
+                {
+                    await _graph.Drives[driveId].Root.ItemWithPath(nome).GetAsync();
+                }
+                catch (ApiException ex) when (ex.ResponseStatusCode == (int)HttpStatusCode.NotFound)
+                {
+                    exists = false;
+                }
+                catch (Exception ex)
+                {
+                    _log.Error($"Erro ao verificar pasta '{nome}': {ex.Message}");
+                    continue;
+                }
+
+                if (!exists)
+                {
+                    try
+                    {
+                        await EnviarBackupAsync(dir, nome);
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Error($"Falha ao sincronizar '{dir}': {ex.Message}");
+                    }
+                }
+            }
+        }
+    }
+
     public async Task ProcessarBackupAsync(
         string pastaOrigem,
         ClientRecord registro,

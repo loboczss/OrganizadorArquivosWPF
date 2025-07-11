@@ -48,6 +48,8 @@ dotnet run
 
 Alternatively open the `OrganizadorArquivosWPF.csproj` file in Visual Studio and run the project.
 
+When pressing **Sincronizar Tudo** in the application, all local folders created by the renamer (AC/MT or in *Documentos*) that contain a service order number are scanned and automatically uploaded to the **DatalogGERAL** library on SharePoint if they are not already present.
+
 ### Background Sync Service
 
 The `SyncWorker` project builds a Windows service that synchronizes data every 10 minutes.
