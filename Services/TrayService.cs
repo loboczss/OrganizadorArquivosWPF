@@ -139,6 +139,15 @@ namespace OrganizadorArquivosWPF.Services
                     }
                 }
 
+                try
+                {
+                    await _backup.SincronizarPastasRenomeacaoAsync();
+                }
+                catch (Exception ex)
+                {
+                    _log.Error($"Backup inicial renomeação: {ex.Message}");
+                }
+
                 progress?.Report(100);
             }
             catch { }
