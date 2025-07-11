@@ -667,6 +667,12 @@ namespace OrganizadorArquivosWPF
                 uploadSeg.Report(100);
                 _manutencoes.ClearData();
 
+                if (_backup != null)
+                {
+                    try { await _backup.SincronizarPastasRenomeacaoAsync(); }
+                    catch (Exception ex) { _log.Error($"Sincronizacao: {ex.Message}"); }
+                }
+
                 if (backupTask.Status == TaskStatus.RanToCompletion)
                 {
                     var enviados = backupTask.Result.Count(r => r.Verificado);
