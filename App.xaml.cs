@@ -160,10 +160,11 @@ namespace OrganizadorArquivosWPF
         {
             _mutex?.ReleaseMutex();
             _mutex?.Dispose();
-            _tray?.Dispose();
+            _tray?.DisposeAsync().AsTask().Wait();
             _sync?.DisposeAsync().AsTask().Wait();
             _showEvent?.Dispose();
             base.OnExit(e);
+            Environment.Exit(0);
         }
 
         private void StartShowEventListener()
