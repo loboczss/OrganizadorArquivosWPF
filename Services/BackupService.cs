@@ -98,19 +98,31 @@ public class BackupService
         return Convert.ToBase64String(hash);
     }
 
-    private async Task<DriveItem?> UploadFileAsync(string driveId, string folderId, string file)
+    private async Task<DriveItem?> UploadFileAsync(
+        string driveId,
+        string folderId,
+        string file,
+        IProgress<double>? progress = null)
     {
         const int SmallFileLimit = 4 * 1024 * 1024; // 4 MB
-        using var fs = File.OpenRead(file);
+        using var fs = new FileStream(
+            file,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            bufferSize: 81920,
+            options: FileOptions.Asynchronous | FileOptions.SequentialScan);
         string fileName = Path.GetFileName(file);
 
         if (fs.Length <= SmallFileLimit)
         {
-            return await _graph.Drives[driveId]
+            var item = await _graph.Drives[driveId]
                 .Items[folderId]
                 .ItemWithPath(fileName)
                 .Content
                 .PutAsync(fs);
+            progress?.Report(100);
+            return item;
         }
 
         // 👇 Definindo o corpo da requisição de upload session
@@ -133,8 +145,15 @@ public class BackupService
             .CreateUploadSession
             .PostAsync(uploadBody);
 
+        IProgress<long>? progBytes = null;
+        if (progress != null)
+        {
+            long total = fs.Length;
+            progBytes = new Progress<long>(b => progress.Report(100.0 * b / total));
+        }
+
         var uploadTask = new LargeFileUploadTask<DriveItem>(uploadSession, fs);
-        var result = await uploadTask.UploadAsync();
+        var result = await uploadTask.UploadAsync(progBytes);
         return result.ItemResponse;
     }
 
@@ -142,14 +161,15 @@ public class BackupService
         string driveId,
         string folderId,
         string file,
-        int maxAttempts = DefaultMaxUploadAttempts)
+        int maxAttempts = DefaultMaxUploadAttempts,
+        IProgress<double>? progress = null)
     {
         int attempt = 0;
         while (true)
         {
             try
             {
-                return await UploadFileAsync(driveId, folderId, file);
+                return await UploadFileAsync(driveId, folderId, file, progress);
             }
             catch (Exception ex)
             {
