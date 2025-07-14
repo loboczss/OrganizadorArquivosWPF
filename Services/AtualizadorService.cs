@@ -129,6 +129,10 @@ namespace OrganizadorArquivosWPF.Services
             sb.AppendLine("    goto erro");
             sb.AppendLine(")");
             sb.AppendLine();
+            sb.AppendLine(":: encerra processos em execucao");
+            sb.AppendLine("taskkill /f /im OrganizadorArquivosWPF.exe >nul 2>&1");
+            sb.AppendLine("taskkill /f /im SyncWorker.exe >nul 2>&1");
+            sb.AppendLine();
             sb.AppendLine(":: backup da instalação atual");
             sb.AppendLine("if exist \"%BACKUP%\" rmdir /s /q \"%BACKUP%\"");
             sb.AppendLine("mkdir \"%BACKUP%\" || (echo Falha ao criar pasta de backup>>\"%LOG%\" & goto erro)");

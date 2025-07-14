@@ -1,7 +1,4 @@
-﻿// File: Services/BackupCache.cs
-// Mantém um mapa “pasta → [arquivos enviados]” em disco (JSON).
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
