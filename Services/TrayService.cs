@@ -14,7 +14,7 @@ namespace OrganizadorArquivosWPF.Services;
 /// Ícone de bandeja + sincronizações em segundo plano
 /// (manutenções, instalações e backups “tipo OneDrive”).
 /// </summary>
-public sealed class TrayService : IDisposable
+public sealed class TrayService : IDisposable, IAsyncDisposable
 {
     private readonly NotifyIcon _icon;
     private readonly ManutencoesService _manutencoes = new();
@@ -26,6 +26,7 @@ public sealed class TrayService : IDisposable
     private readonly LoggerService _log = LoggerService.Instance;
 
     private CancellationTokenSource? _ctsUpdates;
+    private Task? _backupLoop;
 
     public TrayService()
     {
@@ -70,7 +71,7 @@ public sealed class TrayService : IDisposable
         _ctsUpdates = new CancellationTokenSource();
         _manutencoes.StartAutoUpdate(_interval);      // ← só intervalo
         _instalacao.StartAutoUpdate(_interval);      // idem
-        _ = LoopBackupAsync(_ctsUpdates.Token);       // fire-and-forget
+        _backupLoop = LoopBackupAsync(_ctsUpdates.Token);
     }
     #endregion
 
@@ -142,6 +143,7 @@ public sealed class TrayService : IDisposable
             if (System.Windows.Application.Current?.MainWindow is MainWindow win)
                 win.AllowClose = true;
             System.Windows.Application.Current?.Shutdown();
+            Environment.Exit(0);
         };
         return item;
     }
@@ -177,13 +179,19 @@ public sealed class TrayService : IDisposable
     #endregion
 
     #region IDisposable
-    public void Dispose()
+    public void Dispose() => DisposeAsync().AsTask().Wait();
+
+    public async ValueTask DisposeAsync()
     {
         _icon.Visible = false;
         _icon.Dispose();
 
-        _ctsUpdates?.Cancel();
-        _ctsUpdates?.Dispose();
+        if (_ctsUpdates != null)
+        {
+            _ctsUpdates.Cancel();
+            try { if (_backupLoop != null) await _backupLoop; } catch { }
+            _ctsUpdates.Dispose();
+        }
 
         _manutencoes.StopAutoUpdate();
         _instalacao.StopAutoUpdate();
