@@ -55,7 +55,7 @@ public sealed class BackupService
     #region Ponto de entrada público
     public async Task SincronizarTudoAsync(CancellationToken ct = default)
     {
-        _ = await ObterDriveIdAsync(ct);
+        _ = await ObterDriveIdAsync(ct).ConfigureAwait(false);
 
         var pendentes = CarregarPendentes();
         var fila = new ConcurrentQueue<string>(pendentes
@@ -71,7 +71,7 @@ public sealed class BackupService
                 if (ct.IsCancellationRequested) break;
                 try
                 {
-                    var list = await EnviarBackupAsync(dir, null, ct);
+                    var list = await EnviarBackupAsync(dir, null, ct).ConfigureAwait(false);
                     foreach (var r in list) resultados.Add(r);
                     RemoverPendente(dir);
                 }
@@ -83,7 +83,7 @@ public sealed class BackupService
             }
         });
 
-        await Task.WhenAll(workers);
+        await Task.WhenAll(workers).ConfigureAwait(false);
 
         _cache.Save();
         _log.Info($"Backup: OK={resultados.Count(r => r.Verificado)} | Falhas={resultados.Count(r => !r.Verificado)}");
@@ -107,11 +107,11 @@ public sealed class BackupService
         numOs ??= ExtrairOs(pasta);
         if (string.IsNullOrWhiteSpace(numOs)) return res;
 
-        string driveId = await ObterDriveIdAsync(ct);
-        string folderId = await EnsureFolderAsync(driveId, numOs, ct);
+        string driveId = await ObterDriveIdAsync(ct).ConfigureAwait(false);
+        string folderId = await EnsureFolderAsync(driveId, numOs, ct).ConfigureAwait(false);
 
         // preenche cache com o que já existe remoto
-        foreach (var n in await ArquivosRemotosAsync(driveId, folderId, ct))
+        foreach (var n in await ArquivosRemotosAsync(driveId, folderId, ct).ConfigureAwait(false))
             _cache.Add(numOs, n);
 
         // arquivos locais faltantes
@@ -122,10 +122,10 @@ public sealed class BackupService
         var sem = new SemaphoreSlim(MaxConcurrentUploads);
         var tasks = locais.Select(async file =>
         {
-            await sem.WaitAsync(ct);
+            await sem.WaitAsync(ct).ConfigureAwait(false);
             try
             {
-                await _uploader.UploadFileAsync(file, $"{numOs}/{Path.GetFileName(file)}", ct);
+                await _uploader.UploadFileAsync(file, $"{numOs}/{Path.GetFileName(file)}", ct).ConfigureAwait(false);
                 _cache.Add(numOs, Path.GetFileName(file));
                 res.Add(new(Path.GetFileName(file), true, CalcularSha1(file)));
             }
@@ -137,7 +137,7 @@ public sealed class BackupService
             finally { sem.Release(); }
         });
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(false);
 
         // ZIP
         string zip = CriarZipTemporario(pasta);
@@ -145,7 +145,7 @@ public sealed class BackupService
         {
             try
             {
-                await _uploader.UploadFileAsync(zip, $"{numOs}/{Path.GetFileName(zip)}", ct);
+                await _uploader.UploadFileAsync(zip, $"{numOs}/{Path.GetFileName(zip)}", ct).ConfigureAwait(false);
                 _cache.Add(numOs, Path.GetFileName(zip));
                 res.Add(new(Path.GetFileName(zip), true, CalcularSha1(zip)));
             }
@@ -174,7 +174,8 @@ public sealed class BackupService
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var page = await _graph.Drives[driveId]
                                .Items[folderId].Children
-                               .GetAsync(cancellationToken: ct);
+                               .GetAsync(cancellationToken: ct)
+                               .ConfigureAwait(false);
         foreach (var it in page?.Value ?? Enumerable.Empty<DriveItem>())
             if (it.File != null) set.Add(it.Name);
         return set;
@@ -185,9 +186,11 @@ public sealed class BackupService
         if (!string.IsNullOrEmpty(_driveId)) return _driveId;
 
         var site = await _graph.Sites[$"{SPDomain}:/sites/{SPSitePath}"]
-                               .GetAsync(cancellationToken: ct);
+                               .GetAsync(cancellationToken: ct)
+                               .ConfigureAwait(false);
         var drive = (await _graph.Sites[site.Id].Drives
-                                  .GetAsync(cancellationToken: ct))
+                                  .GetAsync(cancellationToken: ct)
+                                  .ConfigureAwait(false))
                     .Value.First(d => d.Name == DocumentLibrary);
         _driveId = drive.Id;
         return _driveId;
@@ -200,7 +203,8 @@ public sealed class BackupService
         {
             return (await _graph.Drives[driveId].Root
                                  .ItemWithPath(nome)
-                                 .GetAsync(cancellationToken: ct)).Id;
+                                 .GetAsync(cancellationToken: ct)
+                                 .ConfigureAwait(false)).Id;
         }
         catch (ApiException ex) when (ex.ResponseStatusCode == 404)
         {
@@ -214,7 +218,8 @@ public sealed class BackupService
                 }
             };
             return (await _graph.Drives[driveId].Items["root"].Children
-                                   .PostAsync(item, cancellationToken: ct))!.Id;
+                                   .PostAsync(item, cancellationToken: ct)
+                                   .ConfigureAwait(false))!.Id;
         }
     }
 
