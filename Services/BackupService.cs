@@ -155,7 +155,7 @@ public sealed class BackupService
                 res.Add(new(Path.GetFileName(zip), false, string.Empty));
             }
         }
-        File.Delete(zip);
+        try { File.Delete(zip); } catch (Exception ex) { _log.Warning($"Falha ao remover arquivo temporário '{zip}': {ex.Message}"); }
 
         _cache.Save();
         return res;
@@ -231,8 +231,8 @@ public sealed class BackupService
 
     private static string CriarZipTemporario(string pasta)
     {
-        string tmp = Path.Combine(Path.GetTempPath(), $"{Path.GetFileName(pasta)}.zip");
-        if (File.Exists(tmp)) File.Delete(tmp);
+        string nome = $"{Path.GetFileName(pasta)}_{Guid.NewGuid():N}.zip";
+        string tmp = Path.Combine(Path.GetTempPath(), nome);
         ZipFile.CreateFromDirectory(pasta, tmp, CompressionLevel.SmallestSize, false);
         return tmp;
     }
