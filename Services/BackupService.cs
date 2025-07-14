@@ -1,500 +1,278 @@
-// BackupService.cs — .NET 8.0 • Envio de Backup em pasta para SharePoint via Microsoft Graph
-
+// File: Services/BackupService.cs
 using Azure.Identity;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
-using System.IO.Compression;
+using Microsoft.Kiota.Abstractions;
 using OrganizadorArquivosWPF.Models;
-using Microsoft.Graph.Drives.Item.Items.Item.CreateUploadSession;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
+using System.IO.Compression;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
-using System;
-using System.Net;
-using Microsoft.Kiota.Abstractions;
 
 namespace OrganizadorArquivosWPF.Services;
 
-public class BackupService
+public sealed class BackupService
 {
-
+    #region Constantes
     private const string SPDomain = "oneengenharia.sharepoint.com";
     private const string SPSitePath = "OneEngenharia";
-    private const string DocumentLibraryName = "DatalogGERAL";
+    private const string DocumentLibrary = "DatalogGERAL";
+
+    private const int MaxConcurrentUploads = 4;
+    private const string CachePath =
+        @"%LOCALAPPDATA%\OneEngRenamer\BackupCache.json";
+    private const string PendingCsv =
+        @"%TEMP%\BackupPendentes.csv";
+    #endregion
 
     private readonly GraphServiceClient _graph;
-    private readonly LoggerService _log = LoggerService.Instance;
+    private readonly ReliableSharePointService _uploader;
+    private readonly BackupCache _cache;
     private string? _driveId;
 
-    private const int DefaultMaxUploadAttempts = 3;
-    private const int BaseRetryDelayMs = 2000;
-    private const int VerificationAttempts = 20;
-    private const int VerificationDelayMs = 5000;
+    private readonly LoggerService _log = LoggerService.Instance;
 
     public BackupService()
     {
-        var scopes = new[] { "https://graph.microsoft.com/.default" };
-        var credential = new ClientSecretCredential(Config.TenantId, Config.ClientId, Config.ClientSecret);
-        _graph = new GraphServiceClient(credential, scopes);
+        _uploader = new ReliableSharePointService(
+            Config.TenantId, Config.ClientId, Config.ClientSecret,
+            SPDomain, $"/sites/{SPSitePath}", DocumentLibrary);
+
+        var cred = new ClientSecretCredential(
+            Config.TenantId, Config.ClientId, Config.ClientSecret);
+        _graph = new GraphServiceClient(cred, new[] { "https://graph.microsoft.com/.default" });
+
+        _cache = new BackupCache(
+            Environment.ExpandEnvironmentVariables(CachePath));
     }
 
-
-    private static string? ExtrairOs(string pasta)
+    #region Ponto de entrada público
+    public async Task SincronizarTudoAsync(CancellationToken ct = default)
     {
-        try
+        _ = await ObterDriveIdAsync(ct);
+
+        var pendentes = CarregarPendentes();
+        var fila = new ConcurrentQueue<string>(pendentes
+            .Concat(EnumerarPastasParaBackup())
+            .Distinct(StringComparer.OrdinalIgnoreCase));
+
+        var resultados = new ConcurrentBag<FileUploadResult>();
+
+        var workers = Enumerable.Range(0, MaxConcurrentUploads).Select(async _ =>
         {
-            var dir = Path.GetFileName(pasta);
-            if (string.IsNullOrWhiteSpace(dir)) return null;
-
-            var parts = dir.Split('_');
-            if (parts.Length == 0) return null;
-
-            var os = parts[0];
-
-            if (os.Length > 2 && os.Substring(2).All(c => c == '0'))
+            while (fila.TryDequeue(out var dir))
             {
-                var sigfi = parts.Length > 1 ? parts[1] : null;
-                if (!string.IsNullOrWhiteSpace(sigfi))
-                    return $"{sigfi}_instalacao";
+                if (ct.IsCancellationRequested) break;
+                try
+                {
+                    var list = await EnviarBackupAsync(dir, null, ct);
+                    foreach (var r in list) resultados.Add(r);
+                    RemoverPendente(dir);
+                }
+                catch (Exception ex)
+                {
+                    _log.Error($"Falha em '{dir}': {ex.Message}");
+                    RegistrarPendente(dir);
+                }
             }
+        });
 
-            return os;
+        await Task.WhenAll(workers);
+
+        _cache.Save();
+        _log.Info($"Backup: OK={resultados.Count(r => r.Verificado)} | Falhas={resultados.Count(r => !r.Verificado)}");
+    }
+
+    public Task SincronizarPastasRenomeacaoAsync() =>
+    SincronizarTudoAsync();
+
+    public Task SincronizarPastasAsync(string _ = null) =>
+        SincronizarTudoAsync();
+
+    #endregion
+
+    #region Enviar pasta
+    public async Task<IReadOnlyList<FileUploadResult>> EnviarBackupAsync(
+        string pasta, string? numOs = null, CancellationToken ct = default)
+    {
+        var res = new List<FileUploadResult>();
+        if (!Directory.Exists(pasta)) return res;
+
+        numOs ??= ExtrairOs(pasta);
+        if (string.IsNullOrWhiteSpace(numOs)) return res;
+
+        string driveId = await ObterDriveIdAsync(ct);
+        string folderId = await EnsureFolderAsync(driveId, numOs, ct);
+
+        // preenche cache com o que já existe remoto
+        foreach (var n in await ArquivosRemotosAsync(driveId, folderId, ct))
+            _cache.Add(numOs, n);
+
+        // arquivos locais faltantes
+        var locais = Directory.GetFiles(pasta)
+                              .Where(f => !_cache.Contains(numOs, Path.GetFileName(f)))
+                              .ToArray();
+
+        var sem = new SemaphoreSlim(MaxConcurrentUploads);
+        var tasks = locais.Select(async file =>
+        {
+            await sem.WaitAsync(ct);
+            try
+            {
+                await _uploader.UploadFileAsync(file, $"{numOs}/{Path.GetFileName(file)}", ct);
+                _cache.Add(numOs, Path.GetFileName(file));
+                res.Add(new(Path.GetFileName(file), true, CalcularSha1(file)));
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Upload '{file}': {ex.Message}");
+                res.Add(new(Path.GetFileName(file), false, string.Empty));
+            }
+            finally { sem.Release(); }
+        });
+
+        await Task.WhenAll(tasks);
+
+        // ZIP
+        string zip = CriarZipTemporario(pasta);
+        if (!_cache.Contains(numOs, Path.GetFileName(zip)))
+        {
+            try
+            {
+                await _uploader.UploadFileAsync(zip, $"{numOs}/{Path.GetFileName(zip)}", ct);
+                _cache.Add(numOs, Path.GetFileName(zip));
+                res.Add(new(Path.GetFileName(zip), true, CalcularSha1(zip)));
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Upload zip '{zip}': {ex.Message}");
+                res.Add(new(Path.GetFileName(zip), false, string.Empty));
+            }
         }
-        catch { return null; }
+        File.Delete(zip);
+
+        _cache.Save();
+        return res;
+    }
+    #endregion
+
+    #region Listagem & helpers
+    private static IEnumerable<string> EnumerarPastasParaBackup() =>
+        RenamerService.EnumerarPastasBase()
+            .SelectMany(d => Directory.EnumerateDirectories(d, "*", SearchOption.AllDirectories))
+            .Where(d => Directory.EnumerateFiles(d).Any());
+
+    private async Task<HashSet<string>> ArquivosRemotosAsync(
+        string driveId, string folderId, CancellationToken ct)
+    {
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var page = await _graph.Drives[driveId]
+                               .Items[folderId].Children
+                               .GetAsync(cancellationToken: ct);
+        foreach (var it in page?.Value ?? Enumerable.Empty<DriveItem>())
+            if (it.File != null) set.Add(it.Name);
+        return set;
     }
 
-    private static string CriarZipTemporario(string pasta)
+    private async Task<string> ObterDriveIdAsync(CancellationToken ct)
     {
-        var nome = Path.GetFileName(pasta);
-        var tmp = Path.Combine(Path.GetTempPath(), nome + ".zip");
+        if (!string.IsNullOrEmpty(_driveId)) return _driveId;
 
-        if (File.Exists(tmp))
-            File.Delete(tmp);
-
-        ZipFile.CreateFromDirectory(pasta, tmp, CompressionLevel.SmallestSize, false);
-        return tmp;
-    }
-
-    private async Task<string> ObterDriveIdAsync()
-    {
-        if (!string.IsNullOrEmpty(_driveId)) return _driveId!;
-
-        var site = await _graph.Sites[$"{SPDomain}:/sites/{SPSitePath}"].GetAsync();
-        var drives = await _graph.Sites[site.Id].Drives.GetAsync();
-        var drive = drives.Value.FirstOrDefault(d => d.Name == DocumentLibraryName)
-            ?? throw new($"Biblioteca '{DocumentLibraryName}' não encontrada.");
-
+        var site = await _graph.Sites[$"{SPDomain}:/sites/{SPSitePath}"]
+                               .GetAsync(cancellationToken: ct);
+        var drive = (await _graph.Sites[site.Id].Drives
+                                  .GetAsync(cancellationToken: ct))
+                    .Value.First(d => d.Name == DocumentLibrary);
         _driveId = drive.Id;
         return _driveId;
     }
 
-    private static string CalcularSha1(string arquivo)
+    private async Task<string> EnsureFolderAsync(
+        string driveId, string nome, CancellationToken ct)
     {
-        using var sha1 = System.Security.Cryptography.SHA1.Create();
-        using var fs = File.OpenRead(arquivo);
-        var hash = sha1.ComputeHash(fs);
-        return Convert.ToBase64String(hash);
-    }
-
-    private async Task<DriveItem?> UploadFileAsync(
-        string driveId,
-        string folderId,
-        string file,
-        IProgress<double>? progress = null)
-    {
-        const int SmallFileLimit = 4 * 1024 * 1024; // 4 MB
-        using var fs = new FileStream(
-            file,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.Read,
-            bufferSize: 81920,
-            options: FileOptions.Asynchronous | FileOptions.SequentialScan);
-        string fileName = Path.GetFileName(file);
-
-        if (fs.Length <= SmallFileLimit)
-        {
-            var item = await _graph.Drives[driveId]
-                .Items[folderId]
-                .ItemWithPath(fileName)
-                .Content
-                .PutAsync(fs);
-            progress?.Report(100);
-            return item;
-        }
-
-        // 👇 Definindo o corpo da requisição de upload session
-        var uploadBody = new CreateUploadSessionPostRequestBody
-        {
-            Item = new DriveItemUploadableProperties
-            {
-                Name = fileName,
-                AdditionalData = new Dictionary<string, object>
-            {
-                { "@microsoft.graph.conflictBehavior", "rename" }
-            }
-            }
-        };
-
-        // 👇 Corrigido: PostAsync agora exige esse body como argumento obrigatório
-        var uploadSession = await _graph.Drives[driveId]
-            .Items[folderId]
-            .ItemWithPath(fileName)
-            .CreateUploadSession
-            .PostAsync(uploadBody);
-
-        IProgress<long>? progBytes = null;
-        if (progress != null)
-        {
-            long total = fs.Length;
-            progBytes = new Progress<long>(b => progress.Report(100.0 * b / total));
-        }
-
-        var uploadTask = new LargeFileUploadTask<DriveItem>(uploadSession, fs);
-        var result = await uploadTask.UploadAsync(progBytes);
-        return result.ItemResponse;
-    }
-
-    private async Task<DriveItem?> UploadFileWithRetryAsync(
-        string driveId,
-        string folderId,
-        string file,
-        int maxAttempts = DefaultMaxUploadAttempts,
-        IProgress<double>? progress = null)
-    {
-        int attempt = 0;
-        while (true)
-        {
-            try
-            {
-                return await UploadFileAsync(driveId, folderId, file, progress);
-            }
-            catch (Exception ex)
-            {
-                attempt++;
-                if (attempt >= maxAttempts)
-                    throw new IOException(
-                        $"Falha ao enviar '{file}' após {attempt} tentativas.", ex);
-
-                int wait = (int)Math.Min(30000, BaseRetryDelayMs * Math.Pow(2, attempt - 1));
-                _log.Warning($"Erro ao enviar '{file}' (tentativa {attempt}). Nova tentativa em {wait / 1000}s...");
-                await Task.Delay(wait);
-            }
-        }
-    }
-
-    private async Task<FileUploadResult> UploadAndVerifyAsync(
-        string driveId,
-        string folderId,
-        string file)
-    {
-        var item = await UploadFileWithRetryAsync(driveId, folderId, file);
-        var hashLocal = CalcularSha1(file);
-        bool ok = false;
-        if (item != null)
-        {
-            var sizeLocal = new FileInfo(file).Length;
-            ok = await WaitForFileHashAsync(driveId, item.Id, hashLocal, sizeLocal);
-        }
-        return new FileUploadResult(Path.GetFileName(file), ok, hashLocal);
-    }
-
-    private async Task<bool> WaitForFileHashAsync(
-        string driveId,
-        string itemId,
-        string expectedHash,
-        long expectedSize,
-        int attempts = VerificationAttempts,
-        int delayMs = VerificationDelayMs)
-    {
-        bool warned = false;
-        for (int i = 0; i < attempts; i++)
-        {
-            try
-            {
-                var remoto = await _graph.Drives[driveId]
-                    .Items[itemId]
-                    .GetAsync(r => r.QueryParameters.Select = new[] { "file", "size" });
-
-                var hashRemoto = remoto.File?.Hashes?.Sha1Hash;
-                if (!string.IsNullOrEmpty(hashRemoto))
-                {
-                    return string.Equals(hashRemoto, expectedHash, StringComparison.OrdinalIgnoreCase);
-                }
-                if (remoto.Size == expectedSize)
-                {
-                    _log.Info($"Arquivo '{remoto.Name}' enviado com sucesso, mas sem hash SHA1.");
-                    return true; // Arquivo enviado, mas sem hash
-                }
-            }
-            catch (Exception ex)
-            {
-                if (!warned)
-                {
-                    warned = true;
-                    _log.Warning($"Falha ao verificar hash: {ex.Message}");
-                }
-            }
-
-            await Task.Delay(delayMs);
-        }
-
-        if (warned)
-            _log.Warning("Não foi possível confirmar o hash após várias tentativas.");
-
-        return false;
-    }
-
-
-    public async Task<IReadOnlyList<FileUploadResult>> EnviarBackupAsync(string pasta, string? numOs = null)
-    {
-        var resultados = new List<FileUploadResult>();
-        if (string.IsNullOrWhiteSpace(pasta) || !Directory.Exists(pasta)) return resultados;
-
-        numOs ??= ExtrairOs(pasta);
-        if (string.IsNullOrWhiteSpace(numOs)) return resultados;
-
         try
         {
-            var driveId = await ObterDriveIdAsync();
-
-            // Verifica se a pasta da OS já existe (usa caminho absoluto para evitar paginação)
-            DriveItem? existingFolder = null;
-            try
-            {
-                existingFolder = await _graph.Drives[driveId].Root.ItemWithPath(numOs).GetAsync();
-            }
-            catch (ApiException ex) when (ex.ResponseStatusCode == (int)HttpStatusCode.NotFound)
-            {
-                existingFolder = null;
-            }
-
-            string folderId;
-            if (existingFolder != null)
-            {
-                folderId = existingFolder.Id;
-            }
-            else
-            {
-                // Cria pasta no SharePoint com nome da OS sem gerar duplicatas
-                var pastaItem = new DriveItem
-                {
-                    Name = numOs,
-                    Folder = new Folder(),
-                    AdditionalData = new Dictionary<string, object>
-                    {
-                        { "@microsoft.graph.conflictBehavior", "fail" }
-                    }
-                };
-                var createdFolder = await _graph.Drives[driveId].Items["root"].Children.PostAsync(pastaItem);
-                folderId = createdFolder!.Id;
-            }
-
-            // Lista arquivos já existentes na pasta
-            var folderChildren = await _graph.Drives[driveId].Items[folderId].Children.GetAsync();
-            var enviados = new HashSet<string>(folderChildren.Value
-                .Where(it => it.File != null)
-                .Select(it => it.Name), StringComparer.OrdinalIgnoreCase);
-
-            // Envia arquivos em paralelo limitando concorrencia
-            bool allOk = true;
-            var sem = new SemaphoreSlim(4);
-            var tarefas = new List<Task<FileUploadResult>>();
-            foreach (var file in Directory.GetFiles(pasta))
-            {
-                if (enviados.Contains(Path.GetFileName(file)))
-                    continue;
-
-                await sem.WaitAsync();
-                tarefas.Add(Task.Run(async () =>
-                {
-                    try
-                    {
-                        var r = await UploadAndVerifyAsync(driveId, folderId, file);
-                        return r;
-                    }
-                    catch (Exception ex)
-                    {
-                        _log.Error($"Erro ao enviar '{file}': {ex.Message}");
-                        allOk = false;
-                        return new FileUploadResult(Path.GetFileName(file), false, string.Empty);
-                    }
-                    finally
-                    {
-                        sem.Release();
-                    }
-                }));
-            }
-
-            var resultArray = await Task.WhenAll(tarefas);
-            resultados.AddRange(resultArray);
-
-
-            // Envia zip de segurança
-            string? zipTmp = null;
-            try
-            {
-                var zipName = Path.GetFileName(pasta) + ".zip";
-                if (!enviados.Contains(zipName))
-                {
-                    zipTmp = CriarZipTemporario(pasta);
-                    var r = await UploadAndVerifyAsync(driveId, folderId, zipTmp);
-                    resultados.Add(r);
-                    if (!r.Verificado) allOk = false;
-                }
-            }
-            catch (Exception ex)
-            {
-                allOk = false;
-                _log.Error($"Erro ao enviar '{zipTmp ?? "zip"}': {ex.Message}");
-            }
-            finally
-            {
-                if (zipTmp != null && File.Exists(zipTmp))
-                    File.Delete(zipTmp);
-            }
-
-            if (!allOk)
-            {
-                _log.Warning("Alguns arquivos falharam ao enviar. Tente novamente mais tarde.");
-            }
+            return (await _graph.Drives[driveId].Root
+                                 .ItemWithPath(nome)
+                                 .GetAsync(cancellationToken: ct)).Id;
         }
-        catch (Exception ex)
+        catch (ApiException ex) when (ex.ResponseStatusCode == 404)
         {
-            _log.Error($"Falha ao enviar backup: {ex.Message}");
+            var item = new DriveItem
+            {
+                Name = nome,
+                Folder = new Folder(),
+                AdditionalData = new Dictionary<string, object>
+                {
+                    ["@microsoft.graph.conflictBehavior"] = "fail"
+                }
+            };
+            return (await _graph.Drives[driveId].Items["root"].Children
+                                   .PostAsync(item, cancellationToken: ct))!.Id;
         }
-
-        return resultados;
     }
 
-    /// <summary>
-    /// Sincroniza todas as pastas de datalog presentes no diretório raiz
-    /// enviando-as para o SharePoint caso ainda não existam lá.
-    /// </summary>
-    public async Task SincronizarPastasAsync(string diretorioRaiz)
+    private static string ExtrairOs(string pasta)
     {
-        if (string.IsNullOrWhiteSpace(diretorioRaiz) || !Directory.Exists(diretorioRaiz))
-            return;
-
-        string driveId = await ObterDriveIdAsync();
-
-        foreach (var dir in Directory.GetDirectories(diretorioRaiz))
-        {
-            string nome = ExtrairOs(dir) ?? Path.GetFileName(dir);
-            bool exists = true;
-            try
-            {
-                await _graph.Drives[driveId].Root.ItemWithPath(nome).GetAsync();
-            }
-            catch (ApiException ex) when (ex.ResponseStatusCode == (int)HttpStatusCode.NotFound)
-            {
-                exists = false;
-            }
-            catch (Exception ex)
-            {
-                _log.Error($"Erro ao verificar pasta '{nome}': {ex.Message}");
-                continue;
-            }
-
-            if (!exists)
-            {
-                try
-                {
-                    await EnviarBackupAsync(dir, nome);
-                }
-                catch (Exception ex)
-                {
-                    _log.Error($"Falha ao sincronizar '{dir}': {ex.Message}");
-                }
-            }
-        }
+        var dir = Path.GetFileName(pasta);
+        if (dir == null) return null;
+        var p = dir.Split('_');
+        var os = p[0];
+        return os.Length > 2 && os[2..].All(c => c == '0')
+            ? (p.Length > 1 ? $"{p[1]}_instalacao" : null)
+            : os;
     }
 
-    /// <summary>
-    /// Procura recursivamente por pastas de OS dentro das pastas de renomeação
-    /// (AC, MT ou Documentos) e envia para o SharePoint caso ainda não existam.
-    /// </summary>
-    public async Task SincronizarPastasRenomeacaoAsync()
+    private static string CriarZipTemporario(string pasta)
     {
-        string driveId = await ObterDriveIdAsync();
-
-        foreach (var baseDir in RenamerService.EnumerarPastasBase())
-        {
-            if (!Directory.Exists(baseDir))
-                continue;
-
-            foreach (var dir in Directory.GetDirectories(baseDir, "*", SearchOption.AllDirectories))
-            {
-                var nome = ExtrairOs(dir);
-                if (string.IsNullOrWhiteSpace(nome))
-                    continue;
-
-                bool exists = true;
-                try
-                {
-                    await _graph.Drives[driveId].Root.ItemWithPath(nome).GetAsync();
-                }
-                catch (ApiException ex) when (ex.ResponseStatusCode == (int)HttpStatusCode.NotFound)
-                {
-                    exists = false;
-                }
-                catch (Exception ex)
-                {
-                    _log.Error($"Erro ao verificar pasta '{nome}': {ex.Message}");
-                    continue;
-                }
-
-                if (!exists)
-                {
-                    try
-                    {
-                        await EnviarBackupAsync(dir, nome);
-                    }
-                    catch (Exception ex)
-                    {
-                        _log.Error($"Falha ao sincronizar '{dir}': {ex.Message}");
-                    }
-                }
-            }
-        }
+        string tmp = Path.Combine(Path.GetTempPath(), $"{Path.GetFileName(pasta)}.zip");
+        if (File.Exists(tmp)) File.Delete(tmp);
+        ZipFile.CreateFromDirectory(pasta, tmp, CompressionLevel.SmallestSize, false);
+        return tmp;
     }
 
-    public async Task ProcessarBackupAsync(
-        string pastaOrigem,
-        ClientRecord registro,
-        string sistema,
-        string tipoSistema,
-        string destinoLocal,
-        bool enviarParaNuvem,
-        string nomeFuncionario,
-        string matriculaFuncionario,
-        IProgress<double>? progress = null)
+    private static string CalcularSha1(string file)
     {
-        if (string.IsNullOrWhiteSpace(pastaOrigem) || !Directory.Exists(pastaOrigem))
-            throw new DirectoryNotFoundException("Pasta de origem inválida para backup.");
-
-        var logFileService = new LogFileService();
-        var renamer = new RenamerService(_log, logFileService);
-
-        await renamer.RenameAsync(
-            pastaOrigem,
-            registro,
-            sistema,
-            tipoSistema,
-            true,
-            destinoLocal,
-            nomeFuncionario,
-            matriculaFuncionario,
-            progress);
-
-        if (enviarParaNuvem)
-        {
-            var nome = ExtrairOs(renamer.LastDestination);
-            await EnviarBackupAsync(renamer.LastDestination, nome);
-        }
+        using var sha1 = SHA1.Create();
+        using var fs = File.OpenRead(file);
+        return Convert.ToBase64String(sha1.ComputeHash(fs));
     }
+    #endregion
+
+    #region CSV pendentes
+    private static readonly ConcurrentDictionary<string, byte> _pend = new(StringComparer.OrdinalIgnoreCase);
+
+    private static void RegistrarPendente(string pasta)
+    {
+        if (_pend.TryAdd(pasta, 0))
+            File.AppendAllLines(Environment.ExpandEnvironmentVariables(PendingCsv), new[] { pasta });
+    }
+
+    private static void RemoverPendente(string pasta)
+    {
+        if (_pend.TryRemove(pasta, out _))
+            File.WriteAllLines(Environment.ExpandEnvironmentVariables(PendingCsv), _pend.Keys);
+    }
+
+    private static List<string> CarregarPendentes()
+    {
+        var path = Environment.ExpandEnvironmentVariables(PendingCsv);
+        if (!File.Exists(path)) return new();
+        var list = File.ReadAllLines(path)
+                       .Where(l => !string.IsNullOrWhiteSpace(l))
+                       .Distinct(StringComparer.OrdinalIgnoreCase)
+                       .ToList();
+        foreach (var p in list) _pend.TryAdd(p, 0);
+        return list;
+    }
+    #endregion
 }
 
-public record FileUploadResult(string Nome, bool Verificado, string Sha1Hash);
+/// Resultado individual
+public sealed record FileUploadResult(string Nome, bool Verificado, string Sha1Hash);

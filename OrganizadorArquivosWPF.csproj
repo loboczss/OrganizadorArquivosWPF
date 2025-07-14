@@ -22,7 +22,6 @@
 		</None>
 		<PackageReference Include="Azure.Core" Version="1.46.2" />
 		<PackageReference Include="Azure.Identity" Version="1.14.1" />
-		<PackageReference Include="Dropbox.Api" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Graph" Version="5.83.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />

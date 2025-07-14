@@ -1,4 +1,11 @@
-﻿using System;
+﻿// File: App.xaml.cs
+using Microsoft.Win32;
+using OrganizadorArquivosWPF.Helpers;
+using OrganizadorArquivosWPF.Models;
+using OrganizadorArquivosWPF.Services;
+using OrganizadorArquivosWPF.Utils;
+using OrganizadorArquivosWPF.Views;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -6,11 +13,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
-using Microsoft.Win32;
-using OrganizadorArquivosWPF.Services;
-using OrganizadorArquivosWPF.Models;
-using OrganizadorArquivosWPF.Views;
-using OrganizadorArquivosWPF.Helpers;
 
 namespace OrganizadorArquivosWPF
 {
@@ -18,15 +20,20 @@ namespace OrganizadorArquivosWPF
     {
         private const string MutexName = "OrganizadorArquivosWPF_SingleInstance";
         private const string ShowEventName = "OrganizadorArquivosWPF_ShowMain";
+
         private Mutex _mutex;
         private EventWaitHandle _showEvent;
         private TrayService _tray;
 
-        protected async override void OnStartup(StartupEventArgs e)
+        private BackupService _backup;
+        private FileSyncService _sync;          // vigia “tipo OneDrive”
+
+        protected override async void OnStartup(StartupEventArgs e)
         {
             bool created;
             _mutex = new Mutex(true, MutexName, out created);
             _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
+
             if (!created)
             {
                 _showEvent.Set();
@@ -39,89 +46,90 @@ namespace OrganizadorArquivosWPF
             base.OnStartup(e);
             EnsureRunAtStartup();
 
+            // Splash inicial
             var splash = new SplashWindow();
             splash.Show();
 
+            var track = new Utils.ProgressTracker(
+                new Progress<double>(v => splash.SetProgress(v)), 3); // 3 passos
+
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+
+            // 1) serviços de tray
             _tray = new TrayService();
-            var progress = new Progress<double>(v => splash.SetProgress(v));
-            var tracker = new Utils.ProgressTracker(progress, 2);
+            try { await _tray.StartAsync(track.NextSegment()).WaitAsync(cts.Token); } catch { }
 
-            // Executa downloads sequenciais com tempo limite
-            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-            try
-            {
-                await _tray.StartAsync(tracker.NextSegment()).WaitAsync(cts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                // Continua mesmo que o download exceda o tempo limite
-            }
-
+            // 2) planilha funcionários
             splash.SetStatus("Baixando planilha de funcionários...");
-            var funcService = new FuncionariosService();
-            var funcSeg = tracker.NextSegment();
+            var funcSrv = new FuncionariosService();
+            await Task.Run(funcSrv.ListarTodos, cts.Token)
+                      .ContinueWith(_ => track.NextSegment().Report(100));
+
+            // 3) sincronização inicial
+            splash.SetStatus("Sincronizando arquivos com SharePoint...");
+            _backup = new BackupService();
             try
             {
-                funcSeg.Report(0);
-                await Task.Run(() => { funcService.ListarTodos(); funcSeg.Report(100); }, cts.Token);
+                await _backup.SincronizarTudoAsync(cts.Token)
+                             .ContinueWith(_ => track.NextSegment().Report(100));
             }
-            catch (OperationCanceledException)
-            {
-                // Ignora caso o download da planilha demore demais
-            }
-            finally
-            {
-                // Garante que o progresso alcance 100% antes de fechar a splash
-                splash.SetProgress(100);
-            }
+            catch { /* ignorar timeout */ }
 
-            // Salva versão antes de seguir para o prompt de atualização
-            Versao.GravarVersaoEmTxt();
-
+            splash.SetProgress(100);
             splash.Close();
 
-            // Prompt de atualização
-            var updatePrompt = new UpdatePromptWindow();
-            bool? wantsUpdate = updatePrompt.ShowDialog();
-            if (wantsUpdate == true && updatePrompt.ShouldUpdate)
+            // Atualização
+            if (await PromptUpdateAsync())
             {
-                await RunUpdateAsync();
                 Shutdown();
                 Environment.Exit(0);
                 return;
             }
 
+            // Monitor de alterações em tempo real
+            _sync = new FileSyncService(_backup);
+
             // Login
             var login = new LoginWindow();
-            bool? loginOk = login.ShowDialog();
-            if (loginOk == true)
+            if (login.ShowDialog() == true)
             {
-                UsuarioRecord user = login.Usuario;
-                var main = new MainWindow(user);
-                Current.MainWindow = main;
-                main.Show();
+                Current.MainWindow = new MainWindow(login.Usuario);
+                Current.MainWindow.Show();
             }
         }
 
-        private async Task RunUpdateAsync()
+        private async Task<bool> PromptUpdateAsync()
         {
-            var service = new AtualizadorService();
-            var file = await service.DownloadLatestReleaseAsync();
-            if (file == null)
+            Versao.GravarVersaoEmTxt();
+
+            var prompt = new UpdatePromptWindow();
+            if (prompt.ShowDialog() == true && prompt.ShouldUpdate)
             {
-                MessageBox.Show("Arquivo de atualização não encontrado.", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
+                var updater = new AtualizadorService();
+                var file = await updater.DownloadLatestReleaseAsync();
+                if (file == null)
+                {
+                    MessageBox.Show("Arquivo de atualização não encontrado.",
+                                    "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return false;
+                }
+
+                Process.Start(new ProcessStartInfo(updater.CreateUpdateBatch(file))
+                {
+                    UseShellExecute = true
+                });
+                return true;
             }
-            var batch = service.CreateUpdateBatch(file);
-            Process.Start(new ProcessStartInfo(batch) { UseShellExecute = true });
+            return false;
         }
 
         private void EnsureRunAtStartup()
         {
             try
             {
+                // Entrada HKCU\Run
                 var runKey = Registry.CurrentUser.OpenSubKey(
-                    "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
+                    @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
 
                 var exe = Environment.ProcessPath ??
                           Process.GetCurrentProcess().MainModule?.FileName ??
@@ -130,33 +138,30 @@ namespace OrganizadorArquivosWPF
                 runKey?.SetValue("OrganizadorArquivosWPF", '"' + exe + '"');
                 runKey?.Close();
 
-                // Cria atalho na pasta de inicialização
-                string startupFolder = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
-                string shortcutPath = Path.Combine(startupFolder, "OrganizadorArquivosWPF.lnk");
+                // Atalho na pasta Startup
+                var startupFolder = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+                var shortcutPath = Path.Combine(startupFolder, "OrganizadorArquivosWPF.lnk");
 
                 if (!File.Exists(shortcutPath))
                 {
-                    Type shellType = Type.GetTypeFromProgID("WScript.Shell");
-                    if (shellType == null) return;
-
-                    dynamic shell = Activator.CreateInstance(shellType);
-                    dynamic shortcut = shell.CreateShortcut(shortcutPath);
-                    shortcut.TargetPath = exe;
-                    shortcut.WorkingDirectory = Path.GetDirectoryName(exe);
-                    shortcut.Save();
+                    // ↓↓↓ ajuste: shell é dynamic
+                    dynamic shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell")!);
+                    dynamic shCut = shell.CreateShortcut(shortcutPath);
+                    shCut.TargetPath = exe;
+                    shCut.WorkingDirectory = Path.GetDirectoryName(exe);
+                    shCut.Save();
                 }
             }
-            catch
-            {
-                // Ignora erros de criação de atalho
-            }
+            catch { /* silencioso */ }
         }
 
+        #region single-instance & tray helpers
         protected override void OnExit(ExitEventArgs e)
         {
             _mutex?.ReleaseMutex();
             _mutex?.Dispose();
             _tray?.Dispose();
+            _sync?.DisposeAsync().AsTask().Wait();
             _showEvent?.Dispose();
             base.OnExit(e);
         }
@@ -177,20 +182,17 @@ namespace OrganizadorArquivosWPF
                             var handle = new WindowInteropHelper(main).Handle;
                             if (handle != IntPtr.Zero)
                             {
-                                Utils.WindowHelper.ShowWindow(handle, Utils.WindowHelper.SW_RESTORE);
-                                Utils.WindowHelper.SetForegroundWindow(handle);
+                                WindowHelper.ShowWindow(handle, WindowHelper.SW_RESTORE);
+                                WindowHelper.SetForegroundWindow(handle);
                             }
                         }
                         else
                         {
                             var login = new LoginWindow();
-                            bool? loginOk = login.ShowDialog();
-                            if (loginOk == true)
+                            if (login.ShowDialog() == true)
                             {
-                                UsuarioRecord user = login.Usuario;
-                                var newMain = new MainWindow(user);
-                                Current.MainWindow = newMain;
-                                newMain.Show();
+                                Current.MainWindow = new MainWindow(login.Usuario);
+                                Current.MainWindow.Show();
                             }
                         }
                     });
@@ -201,19 +203,18 @@ namespace OrganizadorArquivosWPF
         private static void ActivatePreviousInstance()
         {
             var current = Process.GetCurrentProcess();
-            foreach (var process in Process.GetProcessesByName(current.ProcessName))
+            foreach (var p in Process.GetProcessesByName(current.ProcessName))
             {
-                if (process.Id == current.Id)
-                    continue;
-
-                var handle = process.MainWindowHandle;
-                if (handle != IntPtr.Zero)
+                if (p.Id == current.Id) continue;
+                var h = p.MainWindowHandle;
+                if (h != IntPtr.Zero)
                 {
-                    Utils.WindowHelper.ShowWindow(handle, Utils.WindowHelper.SW_RESTORE);
-                    Utils.WindowHelper.SetForegroundWindow(handle);
+                    WindowHelper.ShowWindow(h, WindowHelper.SW_RESTORE);
+                    WindowHelper.SetForegroundWindow(h);
                 }
                 break;
             }
         }
+        #endregion
     }
 }

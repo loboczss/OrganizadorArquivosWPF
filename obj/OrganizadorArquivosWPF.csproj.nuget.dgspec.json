@@ -58,10 +58,6 @@
               "target": "Package",
               "version": "[1.14.1, )"
             },
-            "Dropbox.Api": {
-              "target": "Package",
-              "version": "[7.0.0, )"
-            },
             "Microsoft.Graph": {
               "target": "Package",
               "version": "[5.83.0, )"

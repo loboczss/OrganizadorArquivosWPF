@@ -1,167 +1,192 @@
+// File: Services/TrayService.cs
 using System;
 using System.Drawing;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
-using System.Threading.Tasks;
-using System.IO;
-using OrganizadorArquivosWPF;
 using OrganizadorArquivosWPF.Utils;
 
-namespace OrganizadorArquivosWPF.Services
+namespace OrganizadorArquivosWPF.Services;
+
+/// <summary>
+/// Ícone de bandeja + sincronizações em segundo plano
+/// (manutenções, instalações e backups “tipo OneDrive”).
+/// </summary>
+public sealed class TrayService : IDisposable
 {
-    /// <summary>
-    /// Serviço para exibir ícone na bandeja do sistema e manter
-    /// atualização automática em segundo plano.
-    /// </summary>
-    public class TrayService : IDisposable
+    private readonly NotifyIcon _icon;
+    private readonly ManutencoesService _manutencoes = new();
+    private readonly InstalacaoService _instalacao = new();
+    private readonly BackupService _backup = new();
+
+    private readonly TimeSpan _interval = TimeSpan.FromMinutes(10);
+    private IProgress<double>? _progress;
+    private readonly LoggerService _log = LoggerService.Instance;
+
+    private CancellationTokenSource? _ctsUpdates;
+
+    public TrayService()
     {
-        private readonly NotifyIcon _icon;
-        private readonly ManutencoesService _manutencoes;
-        private readonly InstalacaoService _instalacao;
-        private readonly BackupService _backup;
-        // Intervalo padrão para atualizações automáticas
-        // A primeira sincronização já ocorre na tela splash. Por isso, a
-        // próxima tentativa de download só deve acontecer após 10 minutos.
-        private readonly TimeSpan _interval = TimeSpan.FromMinutes(10);
-        private IProgress<double> _progress;
-        private LoggerService _log => LoggerService.Instance;
-
-        public TrayService()
+        // ─── Ícone + menu ───────────────────────────────────────────────────────
+        var icoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ico-app.ico");
+        _icon = new NotifyIcon
         {
-            _manutencoes = new ManutencoesService();
-            _instalacao = new InstalacaoService();
-            _backup = new BackupService();
+            Visible = true,
+            Icon = File.Exists(icoPath) ? new Icon(icoPath) : SystemIcons.Application,
+            Text = "Organizador de Arquivos"
+        };
 
-            var icoPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ico-app.ico");
-            _icon = new NotifyIcon
-            {
-                Visible = true,
-                Icon = new Icon(icoPath),
-                Text = "Organizador de Arquivos"
-            };
+        var menu = new ContextMenuStrip();
+        menu.Items.Add(MenuAbrirJanela());
+        menu.Items.Add(MenuSincronizarAgora());
+        menu.Items.Add(MenuSair());
+        _icon.ContextMenuStrip = menu;
+    }
 
-            var menu = new ContextMenuStrip();
+    #region Público
+    /// <summary>Sincronização inicial e agenda loops de atualização.</summary>
+    public async Task StartAsync(IProgress<double>? progress)
+    {
+        _progress = progress;
+        var tracker = new ProgressTracker(progress, 2);
 
-            // Botão Abrir
-            var openItem = new ToolStripMenuItem("Abrir");
-            openItem.Click += (s, e) =>
-            {
-                System.Windows.Application.Current?.Dispatcher.Invoke(() =>
-                {
-                    var app = System.Windows.Application.Current;
-                    if (app == null)
-                        return;
+        try
+        {
+            // ① Dados
+            await _manutencoes.ObterDadosAsync(tracker.NextSegment());
+            _manutencoes.ClearData();
+            await _instalacao.AtualizarArquivoAsync(tracker.NextSegment());
 
-                    var window = app.MainWindow;
-                    if (window == null)
-                    {
-                        var login = new Views.LoginWindow();
-                        if (login.ShowDialog() == true)
-                        {
-                            var main = new MainWindow(login.Usuario);
-                            app.MainWindow = main;
-                            main.Show();
-                        }
-                        return;
-                    }
+            // ② Backup
+            await SincronizarBackupInicialAsync();
 
-                    window.Show();
-                    if (window.WindowState == WindowState.Minimized)
-                        window.WindowState = WindowState.Normal;
-                    window.Activate();
-                });
-            };
-            var downloadItem = new ToolStripMenuItem("Sincronizar dados agora");
-            downloadItem.Click += (s, e) =>
-            {
-                var app = System.Windows.Application.Current;
-                if (app != null)
-                {
-                    app.Dispatcher.InvokeAsync(async () =>
-                    {
-                        if (app.MainWindow is MainWindow wnd)
-                        {
-                            await wnd.BaixarDadosAgoraAsync();
-                        }
-                        else
-                        {
-                            try
-                            {
-                                var tracker = new Utils.ProgressTracker(_progress, 2);
-                                await _manutencoes.ObterDadosAsync(tracker.NextSegment());
-                                _manutencoes.ClearData();
-
-                                await _instalacao.AtualizarArquivoAsync(tracker.NextSegment());
-
-                                _progress?.Report(100);
-                            }
-                            catch (Exception ex) { _log.Error($"Download manual: {ex.Message}"); }
-                        }
-                    });
-                }
-            };
-
-            var exitItem = new ToolStripMenuItem("Sair");
-            exitItem.Click += (s, e) =>
-            {
-                var app = System.Windows.Application.Current;
-                if (app?.MainWindow is MainWindow wnd)
-                    wnd.AllowClose = true;
-                app?.Shutdown();
-            };
-            menu.Items.Add(openItem);
-            menu.Items.Add(downloadItem);
-            menu.Items.Add(exitItem);
-            _icon.ContextMenuStrip = menu;
+            progress?.Report(100);
         }
+        catch (Exception ex) { _log.Error($"StartAsync: {ex.Message}"); }
 
-        public async Task StartAsync(IProgress<double> progress)
+        // ─── loops contínuos ────────────────────────────────────────────────────
+        _ctsUpdates = new CancellationTokenSource();
+        _manutencoes.StartAutoUpdate(_interval);      // ← só intervalo
+        _instalacao.StartAutoUpdate(_interval);      // idem
+        _ = LoopBackupAsync(_ctsUpdates.Token);       // fire-and-forget
+    }
+    #endregion
+
+    #region Menus
+    private ToolStripMenuItem MenuAbrirJanela()
+    {
+        var item = new ToolStripMenuItem("Abrir");
+        item.Click += (_, _) =>
         {
-            _progress = progress;
+            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            {
+                var app = System.Windows.Application.Current;
+                if (app == null) return;
+
+                if (app.MainWindow == null)
+                {
+                    var login = new Views.LoginWindow();
+                    if (login.ShowDialog() == true)
+                    {
+                        var main = new MainWindow(login.Usuario);
+                        app.MainWindow = main;
+                        main.Show();
+                    }
+                    return;
+                }
+
+                var win = app.MainWindow;
+                win.Show();
+                if (win.WindowState == WindowState.Minimized)
+                    win.WindowState = WindowState.Normal;
+                win.Activate();
+            });
+        };
+        return item;
+    }
+
+    private ToolStripMenuItem MenuSincronizarAgora()
+    {
+        var item = new ToolStripMenuItem("Sincronizar dados agora");
+        item.Click += async (_, _) =>
+        {
             try
             {
-                var tracker = new Utils.ProgressTracker(progress, 2);
-                await _manutencoes.ObterDadosAsync(tracker.NextSegment());
-                _manutencoes.ClearData();
-
-                await _instalacao.AtualizarArquivoAsync(tracker.NextSegment());
-
-                if (!string.IsNullOrWhiteSpace(Config.BackupFolder) &&
-                    Directory.Exists(Config.BackupFolder))
+                if (System.Windows.Application.Current?.MainWindow is MainWindow wnd)
                 {
-                    try
-                    {
-                        await _backup.SincronizarPastasAsync(Config.BackupFolder);
-                    }
-                    catch (Exception ex)
-                    {
-                        _log.Error($"Backup inicial: {ex.Message}");
-                    }
+                    await wnd.BaixarDadosAgoraAsync();
                 }
-
-                try
+                else
                 {
-                    await _backup.SincronizarPastasRenomeacaoAsync();
-                }
-                catch (Exception ex)
-                {
-                    _log.Error($"Backup inicial renomeação: {ex.Message}");
-                }
+                    var tracker = new ProgressTracker(_progress, 2);
+                    await _manutencoes.ObterDadosAsync(tracker.NextSegment());
+                    _manutencoes.ClearData();
+                    await _instalacao.AtualizarArquivoAsync(tracker.NextSegment());
 
-                progress?.Report(100);
+                    await _backup.SincronizarTudoAsync();
+                    _progress?.Report(100);
+                }
             }
-            catch { }
+            catch (Exception ex) { _log.Error($"Download manual: {ex.Message}"); }
+        };
+        return item;
+    }
 
-            _manutencoes.StartAutoUpdate(_interval, null);
-            _instalacao.StartAutoUpdate(_interval);
+    private ToolStripMenuItem MenuSair()
+    {
+        var item = new ToolStripMenuItem("Sair");
+        item.Click += (_, _) =>
+        {
+            if (System.Windows.Application.Current?.MainWindow is MainWindow win)
+                win.AllowClose = true;
+            System.Windows.Application.Current?.Shutdown();
+        };
+        return item;
+    }
+    #endregion
+
+    #region Backups
+    private async Task SincronizarBackupInicialAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(Config.BackupFolder) &&
+            Directory.Exists(Config.BackupFolder))
+        {
+            try { await _backup.SincronizarTudoAsync(); }
+            catch (Exception ex) { _log.Error($"Backup inicial (fixa): {ex.Message}"); }
         }
 
-        public void Dispose()
+        try { await _backup.SincronizarTudoAsync(); }
+        catch (Exception ex) { _log.Error($"Backup inicial renomeação: {ex.Message}"); }
+    }
+
+    private async Task LoopBackupAsync(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
         {
-            _icon.Visible = false;
-            _icon.Dispose();
-            _manutencoes.StopAutoUpdate();
-            _instalacao.StopAutoUpdate();
+            try
+            {
+                await Task.Delay(_interval, token);
+                await _backup.SincronizarTudoAsync(token);
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { _log.Warning($"Backup loop: {ex.Message}"); }
         }
     }
+    #endregion
+
+    #region IDisposable
+    public void Dispose()
+    {
+        _icon.Visible = false;
+        _icon.Dispose();
+
+        _ctsUpdates?.Cancel();
+        _ctsUpdates?.Dispose();
+
+        _manutencoes.StopAutoUpdate();
+        _instalacao.StopAutoUpdate();
+    }
+    #endregion
 }

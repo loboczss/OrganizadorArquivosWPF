@@ -39,22 +39,6 @@
           }
         }
       },
-      "Dropbox.Api/7.0.0": {
-        "type": "package",
-        "dependencies": {
-          "Newtonsoft.Json": "13.0.2"
-        },
-        "compile": {
-          "lib/netstandard2.0/Dropbox.Api.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/netstandard2.0/Dropbox.Api.dll": {
-            "related": ".xml"
-          }
-        }
-      },
       "Microsoft.Bcl.AsyncInterfaces/8.0.0": {
         "type": "package",
         "compile": {
@@ -611,22 +595,6 @@
         },
         "runtime": {
           "lib/net8.0/Azure.Identity.dll": {
-            "related": ".xml"
-          }
-        }
-      },
-      "Dropbox.Api/7.0.0": {
-        "type": "package",
-        "dependencies": {
-          "Newtonsoft.Json": "13.0.2"
-        },
-        "compile": {
-          "lib/netstandard2.0/Dropbox.Api.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/netstandard2.0/Dropbox.Api.dll": {
             "related": ".xml"
           }
         }
@@ -1189,19 +1157,6 @@
         "lib/net8.0/Azure.Identity.xml",
         "lib/netstandard2.0/Azure.Identity.dll",
         "lib/netstandard2.0/Azure.Identity.xml"
-      ]
-    },
-    "Dropbox.Api/7.0.0": {
-      "sha512": "Ie48rFTFL7rC8YGZ2KMRckhN8QbF56VzCns9+PymrjwcVfnGfKEc2EtHLUau2hrlwvaUtDf6wvTQJXHWAwhhug==",
-      "type": "package",
-      "path": "dropbox.api/7.0.0",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "dropbox.api.7.0.0.nupkg.sha512",
-        "dropbox.api.nuspec",
-        "lib/netstandard2.0/Dropbox.Api.dll",
-        "lib/netstandard2.0/Dropbox.Api.xml"
       ]
     },
     "Microsoft.Bcl.AsyncInterfaces/8.0.0": {
@@ -2074,7 +2029,6 @@
     "net8.0-windows7.0": [
       "Azure.Core >= 1.46.2",
       "Azure.Identity >= 1.14.1",
-      "Dropbox.Api >= 7.0.0",
       "Microsoft.Graph >= 5.83.0",
       "Microsoft.NET.ILLink.Tasks >= 8.0.18",
       "Newtonsoft.Json >= 13.0.3",
@@ -2138,10 +2092,6 @@
           "Azure.Identity": {
             "target": "Package",
             "version": "[1.14.1, )"
-          },
-          "Dropbox.Api": {
-            "target": "Package",
-            "version": "[7.0.0, )"
           },
           "Microsoft.Graph": {
             "target": "Package",
