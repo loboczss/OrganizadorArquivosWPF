@@ -51,8 +51,10 @@ public sealed class ReliableSharePointService
             _tenantId, _clientId, _clientSecret);
         _graph = new GraphServiceClient(cred, new[] { "https://graph.microsoft.com/.default" });
 
-        var site = await _graph.Sites[$"{_domain}:{_sitePath}"].GetAsync();
-        var drive = (await _graph.Sites[site.Id].Drives.GetAsync())!
+        var site = await _graph.Sites[$"{_domain}:{_sitePath}"].GetAsync()
+                              .ConfigureAwait(false);
+        var drive = (await _graph.Sites[site.Id].Drives.GetAsync()
+                                   .ConfigureAwait(false))!
                     .Value.FirstOrDefault(d => d.Name == _libraryName)
                     ?? throw new InvalidOperationException($"Biblioteca '{_libraryName}' não encontrada.");
 
@@ -63,7 +65,7 @@ public sealed class ReliableSharePointService
     #region Upload
     public async Task UploadFileAsync(string localPath, string remotePath, CancellationToken ct = default)
     {
-        await EnsureInitializedAsync();
+        await EnsureInitializedAsync().ConfigureAwait(false);
 
         for (int attempt = 1; attempt <= _maxRetries; attempt++)
         {
@@ -75,7 +77,8 @@ public sealed class ReliableSharePointService
                     .Root
                     .ItemWithPath(remotePath)
                     .Content
-                    .PutAsync(fs, cancellationToken: ct);
+                    .PutAsync(fs, cancellationToken: ct)
+                    .ConfigureAwait(false);
 
                 // opcional: verifica hash
                 _ = VerifyHashAsync(localPath, remotePath, ct).ConfigureAwait(false);
@@ -87,7 +90,7 @@ public sealed class ReliableSharePointService
             {
                 int delay = _baseDelay * (int)Math.Pow(2, attempt - 1);
                 _log.Info($"Throttle {ex.ResponseStatusCode} '{remotePath}' (tentativa {attempt}/{_maxRetries}) – aguardando {delay} ms.");
-                await Task.Delay(delay, ct);
+                await Task.Delay(delay, ct).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -96,7 +99,7 @@ public sealed class ReliableSharePointService
 
                 int delay = _baseDelay * attempt;
                 _log.Warning($"Erro upload '{remotePath}' tent. {attempt}: {ex.Message}. Retry em {delay} ms.");
-                await Task.Delay(delay, ct);
+                await Task.Delay(delay, ct).ConfigureAwait(false);
             }
         }
     }
@@ -112,7 +115,8 @@ public sealed class ReliableSharePointService
             var item = await _graph!
                 .Drives[_driveId!]
                 .Root.ItemWithPath(remotePath)
-                .GetAsync(q => q.QueryParameters.Select = new[] { "file", "size" }, ct);
+                .GetAsync(q => q.QueryParameters.Select = new[] { "file", "size" }, ct)
+                .ConfigureAwait(false);
 
             var remoteHash = item.File?.Hashes?.Sha1Hash;
             if (!string.IsNullOrEmpty(remoteHash) &&
