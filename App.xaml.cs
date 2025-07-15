@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Threading;
 
 namespace OrganizadorArquivosWPF
 {
@@ -43,6 +44,9 @@ namespace OrganizadorArquivosWPF
             }
 
             StartShowEventListener();
+            DispatcherUnhandledException += OnDispatcherUnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+            TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
             base.OnStartup(e);
             EnsureRunAtStartup();
 
@@ -216,6 +220,26 @@ namespace OrganizadorArquivosWPF
                 break;
             }
         }
+
+        #region Global exception handlers
+        private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+        {
+            LoggerService.Instance?.Critical("UI exception: " + e.Exception.Message);
+            e.Handled = true;
+        }
+
+        private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            if (e.ExceptionObject is Exception ex)
+                LoggerService.Instance?.Critical("Unhandled exception: " + ex.Message);
+        }
+
+        private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+        {
+            LoggerService.Instance?.Critical("Task exception: " + e.Exception.Message);
+            e.SetObserved();
+        }
+        #endregion
         #endregion
     }
 }
