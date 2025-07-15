@@ -87,7 +87,7 @@ public sealed class FileSyncService : IAsyncDisposable
             {
                 try
                 {
-                    await _backup.EnviarBackupAsync(dir, null, _cts.Token);
+                    await _backup.EnviarBackupAsync(dir, null, null, _cts.Token);
                 }
                 catch (Exception ex)
                 {

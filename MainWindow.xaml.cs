@@ -75,6 +75,37 @@ namespace OrganizadorArquivosWPF
                 });
             }
         }
+
+        private sealed class UploadProgress : IProgress<double>
+        {
+            private readonly MainWindow _wnd;
+            public UploadProgress(MainWindow wnd) => _wnd = wnd;
+            public void Report(double value)
+            {
+                _wnd.Dispatcher.Invoke(() =>
+                {
+                    if (value >= 100)
+                    {
+                        _wnd.UploadBar.Value = 100;
+                        _wnd.UploadBar.Visibility = Visibility.Collapsed;
+                        _wnd.UploadBar.IsIndeterminate = false;
+                    }
+                    else if (value < 0)
+                    {
+                        if (_wnd.UploadBar.Visibility != Visibility.Visible)
+                            _wnd.UploadBar.Visibility = Visibility.Visible;
+                        _wnd.UploadBar.IsIndeterminate = true;
+                    }
+                    else
+                    {
+                        if (_wnd.UploadBar.Visibility != Visibility.Visible)
+                            _wnd.UploadBar.Visibility = Visibility.Visible;
+                        _wnd.UploadBar.IsIndeterminate = false;
+                        _wnd.UploadBar.Value = value;
+                    }
+                });
+            }
+        }
         #endregion
 
         #region Campos e serviços (mais “leves”)
@@ -88,6 +119,7 @@ namespace OrganizadorArquivosWPF
         private Dictionary<string, ClientRecord> _recordsByOs;
         private readonly ObservableCollection<LogEntry> _logs;
         private readonly DownloadProgress _downloadReporter;
+        private readonly UploadProgress _uploadReporter;
         private LogEntry _lastUpdateEntry;
         private LogEntry _lastBackupEntry;
         private bool _manualSyncRunning;
@@ -107,6 +139,7 @@ namespace OrganizadorArquivosWPF
             _logs = new ObservableCollection<LogEntry>();
             _log = new LoggerService(_logs, Dispatcher);
             _downloadReporter = new DownloadProgress(this);
+            _uploadReporter = new UploadProgress(this);
 
             // Ainda não instanciamos ExcelService, RenamerService, etc., para não travar
             // Essas instâncias serão criadas em background em 'Window_Loaded'.
@@ -128,6 +161,7 @@ namespace OrganizadorArquivosWPF
             // Barras de progresso começam escondidas
             ConfigurarProgressBar();
             ConfigurarDownloadBar();
+            ConfigurarUploadBar();
 
             // Exibe texto-padrão nas labels que serão preenchidas
             TxtSyncStatus.Text = "Verificando dados de manutenção...";
@@ -401,6 +435,14 @@ namespace OrganizadorArquivosWPF
             DownloadBar.Visibility = Visibility.Collapsed;
         }
 
+        private void ConfigurarUploadBar()
+        {
+            UploadBar.Minimum = 0;
+            UploadBar.Maximum = 100;
+            UploadBar.IsIndeterminate = false;
+            UploadBar.Visibility = Visibility.Collapsed;
+        }
+
         private void BuildRecordIndex()
         {
             _recordsByOs = _cachedRecords?
@@ -606,7 +648,8 @@ namespace OrganizadorArquivosWPF
                 !string.IsNullOrWhiteSpace(_renamer.LastDestination) &&
                 Directory.Exists(_renamer.LastDestination))
             {
-                _ = _backup.EnviarBackupAsync(_renamer.LastDestination)
+                _uploadReporter.Report(0);
+                _ = _backup.EnviarBackupAsync(_renamer.LastDestination, null, _uploadReporter)
                     .ContinueWith(t =>
                     {
                         if (!t.IsFaulted)
@@ -653,7 +696,8 @@ namespace OrganizadorArquivosWPF
                 !string.IsNullOrWhiteSpace(_renamer.LastDestination) &&
                 Directory.Exists(_renamer.LastDestination))
             {
-                backupTask = _backup.EnviarBackupAsync(_renamer.LastDestination);
+                _uploadReporter.Report(0);
+                backupTask = _backup.EnviarBackupAsync(_renamer.LastDestination, null, _uploadReporter);
             }
 
             try
