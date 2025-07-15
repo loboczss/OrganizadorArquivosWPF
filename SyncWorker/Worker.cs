@@ -36,7 +36,7 @@ public class Worker
 
             if (!string.IsNullOrWhiteSpace(Config.BackupFolder) && Directory.Exists(Config.BackupFolder))
             {
-                try { await _backup.EnviarBackupAsync(Config.BackupFolder); } catch (Exception ex) { _log.Error($"Backup: {ex.Message}"); }
+                try { await _backup.EnviarBackupAsync(Config.BackupFolder, null, null); } catch (Exception ex) { _log.Error($"Backup: {ex.Message}"); }
             }
 
             try

@@ -71,7 +71,7 @@ public sealed class BackupService
                 if (ct.IsCancellationRequested) break;
                 try
                 {
-                    var list = await EnviarBackupAsync(dir, null, ct).ConfigureAwait(false);
+                    var list = await EnviarBackupAsync(dir, null, null, ct).ConfigureAwait(false);
                     foreach (var r in list) resultados.Add(r);
                     RemoverPendente(dir);
                 }
@@ -99,7 +99,10 @@ public sealed class BackupService
 
     #region Enviar pasta
     public async Task<IReadOnlyList<FileUploadResult>> EnviarBackupAsync(
-        string pasta, string? numOs = null, CancellationToken ct = default)
+        string pasta,
+        string? numOs = null,
+        IProgress<double>? progress = null,
+        CancellationToken ct = default)
     {
         var res = new List<FileUploadResult>();
         if (!Directory.Exists(pasta)) return res;
@@ -120,6 +123,9 @@ public sealed class BackupService
                               .ToArray();
 
         var sem = new SemaphoreSlim(MaxConcurrentUploads);
+        int completed = 0;
+        int total = locais.Length + 1;
+        progress?.Report(total == 0 ? 100 : 0);
         var tasks = locais.Select(async file =>
         {
             await sem.WaitAsync(ct).ConfigureAwait(false);
@@ -134,7 +140,12 @@ public sealed class BackupService
                 _log.Error($"Upload '{file}': {ex.Message}");
                 res.Add(new(Path.GetFileName(file), false, string.Empty));
             }
-            finally { sem.Release(); }
+            finally
+            {
+                sem.Release();
+                int done = Interlocked.Increment(ref completed);
+                progress?.Report(done * 100.0 / total);
+            }
         });
 
         await Task.WhenAll(tasks).ConfigureAwait(false);
@@ -156,6 +167,8 @@ public sealed class BackupService
             }
         }
         try { File.Delete(zip); } catch (Exception ex) { _log.Warning($"Falha ao remover arquivo temporário '{zip}': {ex.Message}"); }
+
+        progress?.Report(100);
 
         _cache.Save();
         return res;
