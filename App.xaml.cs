@@ -24,6 +24,8 @@ namespace OrganizadorArquivosWPF
 
         private Mutex _mutex;
         private EventWaitHandle _showEvent;
+        private CancellationTokenSource? _showEventCts;
+        private Task? _showEventTask;
         private TrayService _tray;
 
         private BackupService _backup;
@@ -166,6 +168,15 @@ namespace OrganizadorArquivosWPF
             _mutex?.Dispose();
             _tray?.DisposeAsync().AsTask().Wait();
             _sync?.DisposeAsync().AsTask().Wait();
+
+            if (_showEventCts != null)
+            {
+                _showEventCts.Cancel();
+                _showEvent.Set();
+                try { _showEventTask?.Wait(); } catch { }
+                _showEventCts.Dispose();
+            }
+
             _showEvent?.Dispose();
             base.OnExit(e);
             Environment.Exit(0);
@@ -173,36 +184,43 @@ namespace OrganizadorArquivosWPF
 
         private void StartShowEventListener()
         {
-            Task.Run(() =>
+            _showEventCts = new CancellationTokenSource();
+            _showEventTask = Task.Run(() =>
             {
-                while (true)
+                try
                 {
-                    _showEvent.WaitOne();
-                    Dispatcher.Invoke(() =>
+                    while (!_showEventCts.IsCancellationRequested)
                     {
-                        var main = Current.MainWindow;
-                        if (main != null)
+                        _showEvent.WaitOne();
+                        if (_showEventCts.IsCancellationRequested) break;
+                        Dispatcher.Invoke(() =>
                         {
-                            main.Show();
-                            var handle = new WindowInteropHelper(main).Handle;
-                            if (handle != IntPtr.Zero)
+                            var main = Current.MainWindow;
+                            if (main != null)
                             {
-                                WindowHelper.ShowWindow(handle, WindowHelper.SW_RESTORE);
-                                WindowHelper.SetForegroundWindow(handle);
+                                main.Show();
+                                var handle = new WindowInteropHelper(main).Handle;
+                                if (handle != IntPtr.Zero)
+                                {
+                                    WindowHelper.ShowWindow(handle, WindowHelper.SW_RESTORE);
+                                    WindowHelper.SetForegroundWindow(handle);
+                                }
                             }
-                        }
-                        else
-                        {
-                            var login = new LoginWindow();
-                            if (login.ShowDialog() == true)
+                            else
                             {
-                                Current.MainWindow = new MainWindow(login.Usuario);
-                                Current.MainWindow.Show();
+                                var login = new LoginWindow();
+                                if (login.ShowDialog() == true)
+                                {
+                                    Current.MainWindow = new MainWindow(login.Usuario);
+                                    Current.MainWindow.Show();
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
                 }
-            });
+                catch (ObjectDisposedException) { }
+                catch (Exception ex) { LoggerService.Instance.Warning($"ShowEvent loop: {ex.Message}"); }
+            }, _showEventCts.Token);
         }
 
         private static void ActivatePreviousInstance()
