@@ -89,12 +89,14 @@ namespace OrganizadorArquivosWPF
                         _wnd.UploadBar.Value = 100;
                         _wnd.UploadBar.Visibility = Visibility.Collapsed;
                         _wnd.UploadBar.IsIndeterminate = false;
+                        _wnd.TxtSyncStatus.Text = "Backup concluído";
                     }
                     else if (value < 0)
                     {
                         if (_wnd.UploadBar.Visibility != Visibility.Visible)
                             _wnd.UploadBar.Visibility = Visibility.Visible;
                         _wnd.UploadBar.IsIndeterminate = true;
+                        _wnd.TxtSyncStatus.Text = "Preparando upload...";
                     }
                     else
                     {
@@ -102,6 +104,7 @@ namespace OrganizadorArquivosWPF
                             _wnd.UploadBar.Visibility = Visibility.Visible;
                         _wnd.UploadBar.IsIndeterminate = false;
                         _wnd.UploadBar.Value = value;
+                        _wnd.TxtSyncStatus.Text = $"Enviando backup ({value:0.#}%)";
                     }
                 });
             }
