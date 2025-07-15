@@ -107,6 +107,8 @@ public sealed class BackupService
         var res = new List<FileUploadResult>();
         if (!Directory.Exists(pasta)) return res;
 
+        progress?.Report(-1); // inicia barra indeterminada
+
         numOs ??= ExtrairOs(pasta);
         if (string.IsNullOrWhiteSpace(numOs)) return res;
 
