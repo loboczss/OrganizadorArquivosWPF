@@ -151,19 +151,19 @@ public sealed class BackupService
         await Task.WhenAll(tasks).ConfigureAwait(false);
 
         // ZIP
-        string zip = CriarZipTemporario(pasta);
-        if (!_cache.Contains(numOs, Path.GetFileName(zip)))
+        string zip = CriarZipTemporario(pasta, out string zipName);
+        if (!_cache.Contains(numOs, zipName))
         {
             try
             {
-                await _uploader.UploadFileAsync(zip, $"{numOs}/{Path.GetFileName(zip)}", ct).ConfigureAwait(false);
-                _cache.Add(numOs, Path.GetFileName(zip));
-                res.Add(new(Path.GetFileName(zip), true, CalcularSha1(zip)));
+                await _uploader.UploadFileAsync(zip, $"{numOs}/{zipName}", ct).ConfigureAwait(false);
+                _cache.Add(numOs, zipName);
+                res.Add(new(zipName, true, CalcularSha1(zip)));
             }
             catch (Exception ex)
             {
                 _log.Error($"Upload zip '{zip}': {ex.Message}");
-                res.Add(new(Path.GetFileName(zip), false, string.Empty));
+                res.Add(new(zipName, false, string.Empty));
             }
         }
         try { File.Delete(zip); } catch (Exception ex) { _log.Warning($"Falha ao remover arquivo temporário '{zip}': {ex.Message}"); }
@@ -247,10 +247,10 @@ public sealed class BackupService
             : os;
     }
 
-    private static string CriarZipTemporario(string pasta)
+    private static string CriarZipTemporario(string pasta, out string nome)
     {
-        string nome = $"{Path.GetFileName(pasta)}_{Guid.NewGuid():N}.zip";
-        string tmp = Path.Combine(Path.GetTempPath(), nome);
+        nome = $"{Path.GetFileName(pasta)}.zip";
+        string tmp = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.zip");
         ZipFile.CreateFromDirectory(pasta, tmp, CompressionLevel.SmallestSize, false);
         return tmp;
     }
