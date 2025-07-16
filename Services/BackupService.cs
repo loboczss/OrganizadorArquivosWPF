@@ -101,13 +101,13 @@ public sealed class BackupService
     public async Task<IReadOnlyList<FileUploadResult>> EnviarBackupAsync(
         string pasta,
         string? numOs = null,
-        IProgress<double>? progress = null,
+        IProgress<UploadProgressInfo>? progress = null,
         CancellationToken ct = default)
     {
         var res = new List<FileUploadResult>();
         if (!Directory.Exists(pasta)) return res;
 
-        progress?.Report(-1); // inicia barra indeterminada
+        progress?.Report(new UploadProgressInfo(-1, 0, 0, null)); // inicia barra indeterminada
 
         numOs ??= ExtrairOs(pasta);
         if (string.IsNullOrWhiteSpace(numOs)) return res;
@@ -127,7 +127,9 @@ public sealed class BackupService
         var sem = new SemaphoreSlim(MaxConcurrentUploads);
         int completed = 0;
         int total = locais.Length + 1;
-        progress?.Report(total == 0 ? 100 : 0);
+        progress?.Report(total == 0 ?
+            new UploadProgressInfo(100, total, total, null) :
+            new UploadProgressInfo(0, 0, total, null));
         var tasks = locais.Select(async file =>
         {
             await sem.WaitAsync(ct).ConfigureAwait(false);
@@ -146,7 +148,9 @@ public sealed class BackupService
             {
                 sem.Release();
                 int done = Interlocked.Increment(ref completed);
-                progress?.Report(done * 100.0 / total);
+                progress?.Report(new UploadProgressInfo(done * 100.0 / total,
+                                                     done, total,
+                                                     Path.GetFileName(file)));
             }
         });
 
@@ -162,7 +166,7 @@ public sealed class BackupService
         catch (Exception ex)
         {
             _log.Error($"Falha ao criar ZIP '{pasta}': {ex.Message}");
-            progress?.Report(100);
+            progress?.Report(new UploadProgressInfo(100, total, total, null));
             return res;
         }
         if (!_cache.Contains(numOs, zipName))
@@ -178,10 +182,16 @@ public sealed class BackupService
                 _log.Error($"Upload zip '{zip}': {ex.Message}");
                 res.Add(new(zipName, false, string.Empty));
             }
+            finally
+            {
+                int done = Interlocked.Increment(ref completed);
+                progress?.Report(new UploadProgressInfo(done * 100.0 / total,
+                                                     done, total, zipName));
+            }
         }
         try { File.Delete(zip); } catch (Exception ex) { _log.Warning($"Falha ao remover arquivo temporário '{zip}': {ex.Message}"); }
 
-        progress?.Report(100);
+        progress?.Report(new UploadProgressInfo(100, total, total, null));
 
         _cache.Save();
         return res;
@@ -235,28 +245,43 @@ public sealed class BackupService
         string driveId, string folderId, CancellationToken ct)
     {
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var page = await _graph.Drives[driveId]
-                               .Items[folderId].Children
-                               .GetAsync(cancellationToken: ct)
-                               .ConfigureAwait(false);
-        foreach (var it in page?.Value ?? Enumerable.Empty<DriveItem>())
-            if (it.File != null) set.Add(it.Name);
-        return set;
+        try
+        {
+            var page = await _graph.Drives[driveId]
+                                   .Items[folderId].Children
+                                   .GetAsync(cancellationToken: ct)
+                                   .ConfigureAwait(false);
+            foreach (var it in page?.Value ?? Enumerable.Empty<DriveItem>())
+                if (it.File != null) set.Add(it.Name);
+            return set;
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"Falha ao listar arquivos remotos: {ex.Message}");
+            throw;
+        }
     }
 
     private async Task<string> ObterDriveIdAsync(CancellationToken ct)
     {
         if (!string.IsNullOrEmpty(_driveId)) return _driveId;
-
-        var site = await _graph.Sites[$"{SPDomain}:/sites/{SPSitePath}"]
-                               .GetAsync(cancellationToken: ct)
-                               .ConfigureAwait(false);
-        var drive = (await _graph.Sites[site.Id].Drives
-                                  .GetAsync(cancellationToken: ct)
-                                  .ConfigureAwait(false))
-                    .Value.First(d => d.Name == DocumentLibrary);
-        _driveId = drive.Id;
-        return _driveId;
+        try
+        {
+            var site = await _graph.Sites[$"{SPDomain}:/sites/{SPSitePath}"]
+                                   .GetAsync(cancellationToken: ct)
+                                   .ConfigureAwait(false);
+            var drive = (await _graph.Sites[site.Id].Drives
+                                      .GetAsync(cancellationToken: ct)
+                                      .ConfigureAwait(false))
+                        .Value.First(d => d.Name == DocumentLibrary);
+            _driveId = drive.Id;
+            return _driveId;
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"Falha ao obter DriveId: {ex.Message}");
+            throw;
+        }
     }
 
     private async Task<string> EnsureFolderAsync(
@@ -283,6 +308,11 @@ public sealed class BackupService
             return (await _graph.Drives[driveId].Items["root"].Children
                                    .PostAsync(item, cancellationToken: ct)
                                    .ConfigureAwait(false))!.Id;
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"Falha ao garantir pasta '{nome}': {ex.Message}");
+            throw;
         }
     }
 
