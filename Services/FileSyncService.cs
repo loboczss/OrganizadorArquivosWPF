@@ -14,6 +14,7 @@ namespace OrganizadorArquivosWPF.Services;
 public sealed class FileSyncService : IAsyncDisposable
 {
     private readonly BackupService _backup;
+    private readonly LoggerService _log = LoggerService.Instance;
     private readonly CancellationTokenSource _cts = new();
     private readonly BlockingCollection<string> _queue = new();
     private readonly Task _worker;
@@ -25,42 +26,62 @@ public sealed class FileSyncService : IAsyncDisposable
 
         // 1) Cria watchers para cada base
         _watchers = RenamerService.EnumerarPastasBase()
-                                  .Select(CreateWatcher)
-                                  .ToArray();
+                                  .Select(TryCreateWatcher)
+                                  .Where(w => w != null)
+                                  .ToArray()!;
 
         // 2) Worker que processa a fila até o Cancel
         _worker = Task.Run(ProcessQueueAsync);
     }
 
     // --- Começa a vigiar uma raiz recursivamente
-    private FileSystemWatcher CreateWatcher(string path)
+    private FileSystemWatcher? TryCreateWatcher(string path)
     {
-        var fsw = new FileSystemWatcher(path)
+        try
         {
-            IncludeSubdirectories = true,
-            NotifyFilter = NotifyFilters.FileName
-                           | NotifyFilters.DirectoryName
-                           | NotifyFilters.LastWrite
-        };
+            var fsw = new FileSystemWatcher(path)
+            {
+                IncludeSubdirectories = true,
+                NotifyFilter = NotifyFilters.FileName
+                               | NotifyFilters.DirectoryName
+                               | NotifyFilters.LastWrite
+            };
 
-        fsw.Created += OnChanged;
-        fsw.Changed += OnChanged;
-        fsw.Renamed += OnRenamed;
-        fsw.EnableRaisingEvents = true;
-        return fsw;
+            fsw.Created += OnChanged;
+            fsw.Changed += OnChanged;
+            fsw.Renamed += OnRenamed;
+            fsw.EnableRaisingEvents = true;
+            return fsw;
+        }
+        catch (Exception ex)
+        {
+            _log.Warning($"Watcher falhou em '{path}': {ex.Message}");
+            return null;
+        }
     }
 
     private void OnChanged(object sender, FileSystemEventArgs e)
     {
-        // Considera apenas arquivos concretos
         if (File.Exists(e.FullPath))
-            _queue.Add(e.FullPath);
+        {
+            try { _queue.Add(e.FullPath); }
+            catch (InvalidOperationException ex)
+            {
+                _log.Warning($"Fila encerrada ao adicionar '{e.FullPath}': {ex.Message}");
+            }
+        }
     }
 
     private void OnRenamed(object sender, RenamedEventArgs e)
     {
         if (File.Exists(e.FullPath))
-            _queue.Add(e.FullPath);
+        {
+            try { _queue.Add(e.FullPath); }
+            catch (InvalidOperationException ex)
+            {
+                _log.Warning($"Fila encerrada ao adicionar '{e.FullPath}': {ex.Message}");
+            }
+        }
     }
 
     // --- Loop infinito que agrupa por pasta e chama BackupService
@@ -74,6 +95,11 @@ public sealed class FileSyncService : IAsyncDisposable
             string file;
             try { file = _queue.Take(_cts.Token); }
             catch (OperationCanceledException) { break; }
+            catch (InvalidOperationException ex)
+            {
+                _log.Warning($"Fila encerrada: {ex.Message}");
+                break;
+            }
 
             var pasta = Directory.GetParent(file)?.FullName;
             if (pasta == null) continue;
@@ -91,7 +117,7 @@ public sealed class FileSyncService : IAsyncDisposable
                 }
                 catch (Exception ex)
                 {
-                    LoggerService.Instance.Warning($"Sync falhou em '{dir}': {ex.Message}");
+                    _log.Error($"Sync falhou em '{dir}': {ex.Message}");
                 }
                 buffer.TryRemove(dir, out _);
             }
@@ -105,7 +131,11 @@ public sealed class FileSyncService : IAsyncDisposable
         foreach (var w in _watchers) w.Dispose();
         _queue.CompleteAdding();
 
-        try { await _worker; } catch { /* ignore */ }
+        try { await _worker; }
+        catch (Exception ex)
+        {
+            _log.Warning($"Worker finalizado com erro: {ex.Message}");
+        }
         _cts.Dispose();
     }
 }
