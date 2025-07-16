@@ -14,6 +14,7 @@ namespace OrganizadorArquivosWPF.Services;
 public sealed class FileSyncService : IAsyncDisposable
 {
     private readonly BackupService _backup;
+    private readonly LoggerService _log = LoggerService.Instance;
     private readonly CancellationTokenSource _cts = new();
     private readonly BlockingCollection<string> _queue = new();
     private readonly Task _worker;
@@ -54,7 +55,7 @@ public sealed class FileSyncService : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            LoggerService.Instance.Warning($"Watcher falhou em '{path}': {ex.Message}");
+            _log.Warning($"Watcher falhou em '{path}': {ex.Message}");
             return null;
         }
     }
@@ -64,7 +65,10 @@ public sealed class FileSyncService : IAsyncDisposable
         if (File.Exists(e.FullPath))
         {
             try { _queue.Add(e.FullPath); }
-            catch (InvalidOperationException) { }
+            catch (InvalidOperationException ex)
+            {
+                _log.Warning($"Fila encerrada ao adicionar '{e.FullPath}': {ex.Message}");
+            }
         }
     }
 
@@ -73,7 +77,10 @@ public sealed class FileSyncService : IAsyncDisposable
         if (File.Exists(e.FullPath))
         {
             try { _queue.Add(e.FullPath); }
-            catch (InvalidOperationException) { }
+            catch (InvalidOperationException ex)
+            {
+                _log.Warning($"Fila encerrada ao adicionar '{e.FullPath}': {ex.Message}");
+            }
         }
     }
 
@@ -88,7 +95,11 @@ public sealed class FileSyncService : IAsyncDisposable
             string file;
             try { file = _queue.Take(_cts.Token); }
             catch (OperationCanceledException) { break; }
-            catch (InvalidOperationException) { break; }
+            catch (InvalidOperationException ex)
+            {
+                _log.Warning($"Fila encerrada: {ex.Message}");
+                break;
+            }
 
             var pasta = Directory.GetParent(file)?.FullName;
             if (pasta == null) continue;
@@ -106,7 +117,7 @@ public sealed class FileSyncService : IAsyncDisposable
                 }
                 catch (Exception ex)
                 {
-                    LoggerService.Instance.Warning($"Sync falhou em '{dir}': {ex.Message}");
+                    _log.Error($"Sync falhou em '{dir}': {ex.Message}");
                 }
                 buffer.TryRemove(dir, out _);
             }
@@ -120,7 +131,11 @@ public sealed class FileSyncService : IAsyncDisposable
         foreach (var w in _watchers) w.Dispose();
         _queue.CompleteAdding();
 
-        try { await _worker; } catch { /* ignore */ }
+        try { await _worker; }
+        catch (Exception ex)
+        {
+            _log.Warning($"Worker finalizado com erro: {ex.Message}");
+        }
         _cts.Dispose();
     }
 }

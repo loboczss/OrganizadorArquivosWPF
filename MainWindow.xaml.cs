@@ -76,22 +76,22 @@ namespace OrganizadorArquivosWPF
             }
         }
 
-        private sealed class UploadProgress : IProgress<double>
+        private sealed class UploadProgress : IProgress<UploadProgressInfo>
         {
             private readonly MainWindow _wnd;
             public UploadProgress(MainWindow wnd) => _wnd = wnd;
-            public void Report(double value)
+            public void Report(UploadProgressInfo info)
             {
                 _wnd.Dispatcher.Invoke(() =>
                 {
-                    if (value >= 100)
+                    if (info.Percent >= 100)
                     {
                         _wnd.UploadBar.Value = 100;
                         _wnd.UploadBar.Visibility = Visibility.Collapsed;
                         _wnd.UploadBar.IsIndeterminate = false;
                         _wnd.TxtSyncStatus.Text = "Backup concluído";
                     }
-                    else if (value < 0)
+                    else if (info.Percent < 0)
                     {
                         if (_wnd.UploadBar.Visibility != Visibility.Visible)
                             _wnd.UploadBar.Visibility = Visibility.Visible;
@@ -103,8 +103,9 @@ namespace OrganizadorArquivosWPF
                         if (_wnd.UploadBar.Visibility != Visibility.Visible)
                             _wnd.UploadBar.Visibility = Visibility.Visible;
                         _wnd.UploadBar.IsIndeterminate = false;
-                        _wnd.UploadBar.Value = value;
-                        _wnd.TxtSyncStatus.Text = $"Enviando backup ({value:0.#}%)";
+                        _wnd.UploadBar.Value = info.Percent;
+                        var name = string.IsNullOrEmpty(info.FileName) ? string.Empty : $"{info.FileName} ";
+                        _wnd.TxtSyncStatus.Text = $"Enviando {name}({info.Completed}/{info.Total})";
                     }
                 });
             }
@@ -651,7 +652,7 @@ namespace OrganizadorArquivosWPF
                 !string.IsNullOrWhiteSpace(_renamer.LastDestination) &&
                 Directory.Exists(_renamer.LastDestination))
             {
-                _uploadReporter.Report(0);
+                _uploadReporter.Report(new UploadProgressInfo(0, 0, 1, null));
                 _ = _backup.EnviarBackupAsync(_renamer.LastDestination, null, _uploadReporter)
                     .ContinueWith(t =>
                     {
@@ -706,7 +707,7 @@ namespace OrganizadorArquivosWPF
                 !string.IsNullOrWhiteSpace(_renamer.LastDestination) &&
                 Directory.Exists(_renamer.LastDestination))
             {
-                _uploadReporter.Report(0);
+                _uploadReporter.Report(new UploadProgressInfo(0, 0, 1, null));
                 backupTask = _backup.EnviarBackupAsync(_renamer.LastDestination, null, _uploadReporter);
             }
 
