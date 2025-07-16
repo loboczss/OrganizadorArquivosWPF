@@ -655,17 +655,20 @@ namespace OrganizadorArquivosWPF
                 _ = _backup.EnviarBackupAsync(_renamer.LastDestination, null, _uploadReporter)
                     .ContinueWith(t =>
                     {
-                        if (!t.IsFaulted)
+                        if (t.IsFaulted)
                         {
-                            var enviados = t.Result.Count(r => r.Verificado);
-                            Dispatcher.Invoke(() =>
-                            {
-                                if (_lastBackupEntry != null)
-                                    _logs.Remove(_lastBackupEntry);
-                                _log.Info($"Backup concluído ({enviados} arquivos) às {DateTime.Now:HH:mm:ss}");
-                                _lastBackupEntry = _logs.LastOrDefault();
-                            });
+                            _log.Error($"Backup falhou: {t.Exception?.GetBaseException().Message}");
+                            return;
                         }
+
+                        var enviados = t.Result.Count(r => r.Verificado);
+                        Dispatcher.Invoke(() =>
+                        {
+                            if (_lastBackupEntry != null)
+                                _logs.Remove(_lastBackupEntry);
+                            _log.Info($"Backup concluído ({enviados} arquivos) às {DateTime.Now:HH:mm:ss}");
+                            _lastBackupEntry = _logs.LastOrDefault();
+                        });
                     });
             }
 
@@ -678,8 +681,12 @@ namespace OrganizadorArquivosWPF
                 _log.Error($"Erro ao atualizar dados de manutenção: {ex.Message}");
             }
 
-            // Atualiza a label “Última atualização” sem aguardar
-            _ = AtualizarDataPlanilhaAsync();
+            // Atualiza a label "Última atualização" sem aguardar
+            _ = AtualizarDataPlanilhaAsync().ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                    _log.Error($"AtualizarDataPlanilhaAsync falhou: {t.Exception?.GetBaseException().Message}");
+            });
             
         }
 
