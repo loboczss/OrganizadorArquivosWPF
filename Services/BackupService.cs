@@ -153,7 +153,18 @@ public sealed class BackupService
         await Task.WhenAll(tasks).ConfigureAwait(false);
 
         // ZIP
-        string zip = CriarZipTemporario(pasta, out string zipName);
+        string zip;
+        string zipName;
+        try
+        {
+            zip = CriarZipTemporario(pasta, out zipName);
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"Falha ao criar ZIP '{pasta}': {ex.Message}");
+            progress?.Report(100);
+            return res;
+        }
         if (!_cache.Contains(numOs, zipName))
         {
             try
@@ -178,10 +189,47 @@ public sealed class BackupService
     #endregion
 
     #region Listagem & helpers
-    private static IEnumerable<string> EnumerarPastasParaBackup() =>
-        RenamerService.EnumerarPastasBase()
-            .SelectMany(d => Directory.EnumerateDirectories(d, "*", SearchOption.AllDirectories))
-            .Where(d => Directory.EnumerateFiles(d).Any());
+    private static IEnumerable<string> EnumerarPastasParaBackup()
+    {
+        foreach (var baseDir in RenamerService.EnumerarPastasBase())
+        {
+            foreach (var dir in SafeEnumerateDirectories(baseDir))
+            {
+                if (HasFiles(dir))
+                    yield return dir;
+            }
+        }
+    }
+
+    private static IEnumerable<string> SafeEnumerateDirectories(string root)
+    {
+        var stack = new Stack<string>();
+        stack.Push(root);
+        while (stack.Count > 0)
+        {
+            var current = stack.Pop();
+            yield return current;
+            try
+            {
+                foreach (var sub in Directory.GetDirectories(current))
+                    stack.Push(sub);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                LoggerService.Instance.Warning($"Falha ao enumerar '{current}': {ex.Message}");
+            }
+        }
+    }
+
+    private static bool HasFiles(string dir)
+    {
+        try { return Directory.EnumerateFiles(dir).Any(); }
+        catch (Exception ex)
+        {
+            LoggerService.Instance.Warning($"Falha ao ler '{dir}': {ex.Message}");
+            return false;
+        }
+    }
 
     private async Task<HashSet<string>> ArquivosRemotosAsync(
         string driveId, string folderId, CancellationToken ct)
