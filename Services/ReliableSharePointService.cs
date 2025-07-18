@@ -110,6 +110,9 @@ public sealed class ReliableSharePointService
 
 
 
+        if (!File.Exists(localPath) || new FileInfo(localPath).Length == 0)
+            return;
+
         for (int attempt = 1; attempt <= _maxRetries; attempt++)
         {
             try
@@ -132,16 +135,14 @@ public sealed class ReliableSharePointService
                    ex.ResponseStatusCode == (int)HttpStatusCode.ServiceUnavailable)
             {
                 int delay = _baseDelay * (int)Math.Pow(2, attempt - 1);
-                _log.Info($"Throttle {ex.ResponseStatusCode} '{remotePath}' (tentativa {attempt}/{_maxRetries}) – aguardando {delay} ms.");
                 await Task.Delay(delay, ct).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 if (attempt == _maxRetries)
                     throw;
 
                 int delay = _baseDelay * attempt;
-                _log.Warning($"Erro upload '{remotePath}' tent. {attempt}: {ex.Message}. Retry em {delay} ms.");
                 await Task.Delay(delay, ct).ConfigureAwait(false);
             }
         }

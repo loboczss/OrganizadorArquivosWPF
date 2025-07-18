@@ -78,9 +78,8 @@ public sealed class BackupService
                     foreach (var r in list) resultados.Add(r);
                     RemoverPendente(dir);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    _log.Error($"Falha em '{dir}': {ex.Message}");
                     RegistrarPendente(dir);
                 }
             }
