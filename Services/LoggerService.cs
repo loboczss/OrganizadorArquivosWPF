@@ -42,21 +42,28 @@ namespace OrganizadorArquivosWPF.Services
             if (_dispatcher != null && _logs != null)
             {
                 // Atualiza a UI de forma thread-safe e evita duplicados
-                _dispatcher.Invoke(() =>
+                try
                 {
-                    var last = _logs.LastOrDefault();
-                    if (last != null && last.Tipo == tipo && last.Emoji == emoji && last.Mensagem == mensagem)
+                    _dispatcher.Invoke(() =>
                     {
-                        last.Hora = DateTime.Now;
-                        entry = last;
-                    }
-                    else
-                    {
-                        _logs.Add(entry);
-                        if (_logs.Count > MaxEntries)
-                            _logs.RemoveAt(0);
-                    }
-                });
+                        var last = _logs.LastOrDefault();
+                        if (last != null && last.Tipo == tipo && last.Emoji == emoji && last.Mensagem == mensagem)
+                        {
+                            last.Hora = DateTime.Now;
+                            entry = last;
+                        }
+                        else
+                        {
+                            _logs.Add(entry);
+                            if (_logs.Count > MaxEntries)
+                                _logs.RemoveAt(0);
+                        }
+                    });
+                }
+                catch (Exception)
+                {
+                    // dispatcher pode estar finalizando; ignora falha de log na UI
+                }
             }
 
             // Grava em disco de forma thread-safe (ignora duplicados)
@@ -172,7 +179,16 @@ namespace OrganizadorArquivosWPF.Services
         public void Clear()
         {
             if (_dispatcher != null && _logs != null)
-                _dispatcher.Invoke(() => _logs.Clear());
+            {
+                try
+                {
+                    _dispatcher.Invoke(() => _logs.Clear());
+                }
+                catch (Exception)
+                {
+                    // dispatcher pode estar finalizando; ignora
+                }
+            }
         }
     }
 }
