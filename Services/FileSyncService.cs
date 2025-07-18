@@ -6,6 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -32,6 +33,8 @@ public sealed class FileSyncService : IAsyncDisposable
 
         // 2) Worker que processa a fila até o Cancel
         _worker = Task.Run(ProcessQueueAsync);
+
+        NetworkChange.NetworkAvailabilityChanged += OnNetworkAvailabilityChanged;
     }
 
     // --- Começa a vigiar uma raiz recursivamente
@@ -136,6 +139,18 @@ public sealed class FileSyncService : IAsyncDisposable
         {
             _log.Warning($"Worker finalizado com erro: {ex.Message}");
         }
+        NetworkChange.NetworkAvailabilityChanged -= OnNetworkAvailabilityChanged;
         _cts.Dispose();
+    }
+
+    private void OnNetworkAvailabilityChanged(object? sender, NetworkAvailabilityEventArgs e)
+    {
+        if (!e.IsAvailable) return;
+
+        _ = Task.Run(async () =>
+        {
+            try { await _backup.SincronizarTudoAsync(_cts.Token); }
+            catch (Exception ex) { _log.Warning($"Auto sync reconectou: {ex.Message}"); }
+        });
     }
 }
