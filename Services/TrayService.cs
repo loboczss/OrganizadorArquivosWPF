@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Linq;
 using System.Windows.Forms;
 using OrganizadorArquivosWPF.Utils;
 
@@ -44,6 +45,8 @@ public sealed class TrayService : IDisposable, IAsyncDisposable
         menu.Items.Add(MenuSincronizarAgora());
         menu.Items.Add(MenuSair());
         _icon.ContextMenuStrip = menu;
+
+        _icon.DoubleClick += (_, _) => MostrarJanelaAtual();
     }
 
     #region Público
@@ -79,32 +82,7 @@ public sealed class TrayService : IDisposable, IAsyncDisposable
     private ToolStripMenuItem MenuAbrirJanela()
     {
         var item = new ToolStripMenuItem("Abrir");
-        item.Click += (_, _) =>
-        {
-            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
-            {
-                var app = System.Windows.Application.Current;
-                if (app == null) return;
-
-                if (app.MainWindow == null)
-                {
-                    var login = new Views.LoginWindow();
-                    if (login.ShowDialog() == true)
-                    {
-                        var main = new MainWindow(login.Usuario);
-                        app.MainWindow = main;
-                        main.Show();
-                    }
-                    return;
-                }
-
-                var win = app.MainWindow;
-                win.Show();
-                if (win.WindowState == WindowState.Minimized)
-                    win.WindowState = WindowState.Normal;
-                win.Activate();
-            });
-        };
+        item.Click += (_, _) => MostrarJanelaAtual();
         return item;
     }
 
@@ -147,6 +125,33 @@ public sealed class TrayService : IDisposable, IAsyncDisposable
         };
         return item;
     }
+
+    private static void MostrarJanelaAtual()
+    {
+        System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+        {
+            var app = System.Windows.Application.Current;
+            if (app == null) return;
+
+            var win = app.Windows.Cast<Window>().LastOrDefault();
+            if (win != null)
+            {
+                win.Show();
+                if (win.WindowState == WindowState.Minimized)
+                    win.WindowState = WindowState.Normal;
+                win.Activate();
+                return;
+            }
+
+            var login = new Views.LoginWindow();
+            if (login.ShowDialog() == true)
+            {
+                var main = new MainWindow(login.Usuario);
+                app.MainWindow = main;
+                main.Show();
+            }
+        });
+    }
     #endregion
 
     #region Backups
@@ -170,7 +175,7 @@ public sealed class TrayService : IDisposable, IAsyncDisposable
             try
             {
                 await Task.Delay(_interval, token);
-                await _backup.SincronizarTudoAsync(token);
+                await _backup.SincronizarTudoAsync(null, token);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex) { _log.Warning($"Backup loop: {ex.Message}"); }

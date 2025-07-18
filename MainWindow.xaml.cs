@@ -662,11 +662,15 @@ namespace OrganizadorArquivosWPF
                         }
 
                         var enviados = t.Result.Count(r => r.Verificado);
+                        var falhas = t.Result.Where(r => !r.Verificado)
+                                             .Select(r => r.Nome)
+                                             .ToList();
+                        var fail = falhas.Count;
                         Dispatcher.Invoke(() =>
                         {
                             if (_lastBackupEntry != null)
                                 _logs.Remove(_lastBackupEntry);
-                            _log.Info($"Backup concluído ({enviados} arquivos) às {DateTime.Now:HH:mm:ss}");
+                            _log.Info($"Backup concluído: OK={enviados} | Falhas={fail}{(fail > 0 ? $" ({string.Join(", ", falhas)})" : string.Empty)} às {DateTime.Now:HH:mm:ss}");
                             _lastBackupEntry = _logs.LastOrDefault();
                         });
                     });
@@ -723,18 +727,22 @@ namespace OrganizadorArquivosWPF
 
                 if (_backup != null)
                 {
-                    try { await _backup.SincronizarPastasRenomeacaoAsync(); }
+                    try { await _backup.SincronizarPastasRenomeacaoAsync(_uploadReporter); }
                     catch (Exception ex) { _log.Error($"Sincronizacao: {ex.Message}"); }
                 }
 
                 if (backupTask.Status == TaskStatus.RanToCompletion)
                 {
                     var enviados = backupTask.Result.Count(r => r.Verificado);
+                    var falhas = backupTask.Result.Where(r => !r.Verificado)
+                                                .Select(r => r.Nome)
+                                                .ToList();
+                    var fail = falhas.Count;
                     Dispatcher.Invoke(() =>
                     {
                         if (_lastBackupEntry != null)
                             _logs.Remove(_lastBackupEntry);
-                        _log.Info($"Backup concluído ({enviados} arquivos) às {DateTime.Now:HH:mm:ss}");
+                        _log.Info($"Backup concluído: OK={enviados} | Falhas={fail}{(fail > 0 ? $" ({string.Join(", ", falhas)})" : string.Empty)} às {DateTime.Now:HH:mm:ss}");
                         _lastBackupEntry = _logs.LastOrDefault();
                     });
                 }

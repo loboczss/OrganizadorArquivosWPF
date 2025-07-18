@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -63,25 +64,59 @@ public sealed class ReliableSharePointService
     #endregion
 
     #region Upload
-    public async Task UploadFileAsync(string localPath, string remotePath, CancellationToken ct = default)
+    private sealed record UploadCheckpoint(string RemotePath, string UploadUrl, DateTimeOffset Expiration);
+
+    public async Task UploadFileAsync(string localPath, string remotePath, IProgress<double>? progress = null, CancellationToken ct = default)
     {
         await EnsureInitializedAsync().ConfigureAwait(false);
+
+        string checkpointFile = Path.ChangeExtension(localPath, ".upload.json");
+        UploadCheckpoint? checkpoint = null;
+        if (File.Exists(checkpointFile))
+        {
+            try
+            {
+                checkpoint = JsonSerializer.Deserialize<UploadCheckpoint>(File.ReadAllText(checkpointFile));
+                if (checkpoint != null && checkpoint.Expiration < DateTimeOffset.UtcNow)
+                    checkpoint = null;
+            }
+            catch { checkpoint = null; }
+        }
+
+        UploadSession session;
+        if (checkpoint == null)
+        {
+            var body = new CreateUploadSessionPostRequestBody();
+            session = await _graph!
+                .Drives[_driveId!]
+                .Root
+                .ItemWithPath(remotePath)
+                .CreateUploadSession
+                .PostAsync(body, cancellationToken: ct)
+                .ConfigureAwait(false);
+            checkpoint = new(remotePath, session.UploadUrl!, session.ExpirationDateTime!.Value);
+            File.WriteAllText(checkpointFile, JsonSerializer.Serialize(checkpoint));
+        }
+        else
+        {
+            session = new UploadSession { UploadUrl = checkpoint.UploadUrl, ExpirationDateTime = checkpoint.Expiration };
+        }
 
         for (int attempt = 1; attempt <= _maxRetries; attempt++)
         {
             try
             {
                 using var fs = File.OpenRead(localPath);
-                await _graph!
-                    .Drives[_driveId!]
-                    .Root
-                    .ItemWithPath(remotePath)
-                    .Content
-                    .PutAsync(fs, cancellationToken: ct)
-                    .ConfigureAwait(false);
+                var task = new LargeFileUploadTask<DriveItem>(session, fs);
+                var prog = new Progress<long>(bytes => progress?.Report(bytes * 100.0 / fs.Length));
+                var result = checkpoint == null ?
+                    await task.UploadAsync(prog, ct).ConfigureAwait(false) :
+                    await task.ResumeAsync(prog, ct).ConfigureAwait(false);
+                if (!result.UploadSucceeded)
+                    throw new Exception("Upload incompleto");
 
-                // opcional: verifica hash
                 _ = VerifyHashAsync(localPath, remotePath, ct).ConfigureAwait(false);
+                try { File.Delete(checkpointFile); } catch { }
                 return;
             }
             catch (ServiceException ex) when (
@@ -95,7 +130,7 @@ public sealed class ReliableSharePointService
             catch (Exception ex)
             {
                 if (attempt == _maxRetries)
-                    throw; // estoura de vez
+                    throw;
 
                 int delay = _baseDelay * attempt;
                 _log.Warning($"Erro upload '{remotePath}' tent. {attempt}: {ex.Message}. Retry em {delay} ms.");
