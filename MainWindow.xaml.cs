@@ -232,7 +232,6 @@ namespace OrganizadorArquivosWPF
             {
                 _log.Warning("Falha ao atualizar dados de manutenção: " + ex.Message);
             }
-
         }
 
         #region Botão Processar
