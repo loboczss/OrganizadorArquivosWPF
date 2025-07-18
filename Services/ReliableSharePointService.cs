@@ -1,4 +1,5 @@
 ﻿// File: Services/ReliableSharePointService.cs
+using Microsoft.Graph.Drives.Item.Items.Item.CreateUploadSession;
 using System;
 using System.IO;
 using System.Linq;
@@ -86,7 +87,7 @@ public sealed class ReliableSharePointService
         UploadSession session;
         if (checkpoint == null)
         {
-            var body = new CreateUploadSessionPostRequestBody();
+            var body = new CreateUploadSessionPostRequestBody(); // objeto vazio já funciona
             session = await _graph!
                 .Drives[_driveId!]
                 .Root
@@ -94,13 +95,20 @@ public sealed class ReliableSharePointService
                 .CreateUploadSession
                 .PostAsync(body, cancellationToken: ct)
                 .ConfigureAwait(false);
+
             checkpoint = new(remotePath, session.UploadUrl!, session.ExpirationDateTime!.Value);
             File.WriteAllText(checkpointFile, JsonSerializer.Serialize(checkpoint));
         }
         else
         {
-            session = new UploadSession { UploadUrl = checkpoint.UploadUrl, ExpirationDateTime = checkpoint.Expiration };
+            session = new UploadSession
+            {
+                UploadUrl = checkpoint.UploadUrl,
+                ExpirationDateTime = checkpoint.Expiration
+            };
         }
+
+
 
         for (int attempt = 1; attempt <= _maxRetries; attempt++)
         {
@@ -109,9 +117,9 @@ public sealed class ReliableSharePointService
                 using var fs = File.OpenRead(localPath);
                 var task = new LargeFileUploadTask<DriveItem>(session, fs);
                 var prog = new Progress<long>(bytes => progress?.Report(bytes * 100.0 / fs.Length));
-                var result = checkpoint == null ?
-                    await task.UploadAsync(prog, ct).ConfigureAwait(false) :
-                    await task.ResumeAsync(prog, ct).ConfigureAwait(false);
+                var result = checkpoint == null
+                    ? await task.UploadAsync(prog, cancellationToken: ct).ConfigureAwait(false)
+                    : await task.ResumeAsync(prog, cancellationToken: ct).ConfigureAwait(false);
                 if (!result.UploadSucceeded)
                     throw new Exception("Upload incompleto");
 

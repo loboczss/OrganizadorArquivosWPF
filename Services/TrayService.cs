@@ -133,9 +133,10 @@ public sealed class TrayService : IDisposable, IAsyncDisposable
             var app = System.Windows.Application.Current;
             if (app == null) return;
 
-            var win = app.Windows.Cast<Window>().LastOrDefault();
-            if (win != null)
+            
+            if (app.MainWindow != null)
             {
+                var win = app.MainWindow;
                 win.Show();
                 if (win.WindowState == WindowState.Minimized)
                     win.WindowState = WindowState.Normal;
