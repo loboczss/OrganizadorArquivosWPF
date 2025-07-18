@@ -120,6 +120,7 @@
             <Setter Property="FontWeight"          Value="Normal"/>
             <Setter Property="TextWrapping"        Value="Wrap"/>
             <Setter Property="Foreground"          Value="#1a1a1a"/>
+            <Setter Property="IsTextSelectionEnabled" Value="True"/>
         </Style>
 
         <!-- Linhas coloridas do log (pinta o BACKGROUND) -->
