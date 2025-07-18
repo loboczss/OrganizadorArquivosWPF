@@ -170,7 +170,7 @@ public sealed class TrayService : IDisposable, IAsyncDisposable
             try
             {
                 await Task.Delay(_interval, token);
-                await _backup.SincronizarTudoAsync(token);
+                await _backup.SincronizarTudoAsync(null, token);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex) { _log.Warning($"Backup loop: {ex.Message}"); }
