@@ -78,9 +78,8 @@ public sealed class BackupService
                     foreach (var r in list) resultados.Add(r);
                     RemoverPendente(dir);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    _log.Error($"Falha em '{dir}': {ex.Message}");
                     RegistrarPendente(dir);
                 }
             }
@@ -182,9 +181,8 @@ public sealed class BackupService
         {
             zip = CriarZipTemporario(pasta, out zipName);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _log.Error($"Falha ao criar ZIP '{pasta}': {ex.Message}");
             progress?.Report(new UploadProgressInfo(100, total, total, null));
             return res;
         }
@@ -212,7 +210,7 @@ public sealed class BackupService
                                                      done, total, zipName));
             }
         }
-        try { File.Delete(zip); } catch (Exception ex) { _log.Warning($"Falha ao remover arquivo temporário '{zip}': {ex.Message}"); }
+        try { File.Delete(zip); } catch { }
 
         progress?.Report(new UploadProgressInfo(100, total, total, null));
 
@@ -278,9 +276,8 @@ public sealed class BackupService
                 if (it.File != null) set.Add(it.Name);
             return set;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _log.Error($"Falha ao listar arquivos remotos: {ex.Message}");
             throw;
         }
     }
@@ -300,9 +297,8 @@ public sealed class BackupService
             _driveId = drive.Id;
             return _driveId;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _log.Error($"Falha ao obter DriveId: {ex.Message}");
             throw;
         }
     }
@@ -332,9 +328,8 @@ public sealed class BackupService
                                    .PostAsync(item, cancellationToken: ct)
                                    .ConfigureAwait(false))!.Id;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _log.Error($"Falha ao garantir pasta '{nome}': {ex.Message}");
             throw;
         }
     }
