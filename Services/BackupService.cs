@@ -53,8 +53,11 @@ public sealed class BackupService
     }
 
     #region Ponto de entrada público
-    public async Task SincronizarTudoAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<FileUploadResult>> SincronizarTudoAsync(
+        IProgress<UploadProgressInfo>? progress = null,
+        CancellationToken ct = default)
     {
+        progress?.Report(new UploadProgressInfo(-1, 0, 0, null));
         _ = await ObterDriveIdAsync(ct).ConfigureAwait(false);
 
         var pendentes = CarregarPendentes();
@@ -86,14 +89,26 @@ public sealed class BackupService
         await Task.WhenAll(workers).ConfigureAwait(false);
 
         _cache.Save();
-        _log.Info($"Backup: OK={resultados.Count(r => r.Verificado)} | Falhas={resultados.Count(r => !r.Verificado)}");
+        int ok = resultados.Count(r => r.Verificado);
+        var falhas = resultados.Where(r => !r.Verificado)
+                               .Select(r => r.Nome)
+                               .ToList();
+        int fail = falhas.Count;
+        progress?.Report(new UploadProgressInfo(100, ok + fail, ok + fail, null));
+        _log.Info($"Backup: OK={ok} | Falhas={fail}{(fail > 0 ? $" ({string.Join(", ", falhas)})" : string.Empty)}");
+        return resultados.ToList();
     }
 
-    public Task SincronizarPastasRenomeacaoAsync() =>
-    SincronizarTudoAsync();
 
-    public Task SincronizarPastasAsync(string _ = null) =>
-        SincronizarTudoAsync();
+    public Task<IReadOnlyList<FileUploadResult>> SincronizarPastasRenomeacaoAsync(
+        IProgress<UploadProgressInfo>? progress = null,
+        CancellationToken ct = default) =>
+        SincronizarTudoAsync(progress, ct);
+
+    public Task<IReadOnlyList<FileUploadResult>> SincronizarPastasAsync(string _ = null,
+        IProgress<UploadProgressInfo>? progress = null,
+        CancellationToken ct = default) =>
+        SincronizarTudoAsync(progress, ct);
 
     #endregion
 
@@ -139,9 +154,8 @@ public sealed class BackupService
                 _cache.Add(numOs, Path.GetFileName(file));
                 res.Add(new(Path.GetFileName(file), true, CalcularSha1(file)));
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _log.Error($"Upload '{file}': {ex.Message}");
                 res.Add(new(Path.GetFileName(file), false, string.Empty));
             }
             finally
@@ -177,9 +191,8 @@ public sealed class BackupService
                 _cache.Add(numOs, zipName);
                 res.Add(new(zipName, true, CalcularSha1(zip)));
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _log.Error($"Upload zip '{zip}': {ex.Message}");
                 res.Add(new(zipName, false, string.Empty));
             }
             finally

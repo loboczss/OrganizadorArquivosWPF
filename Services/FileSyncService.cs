@@ -149,7 +149,7 @@ public sealed class FileSyncService : IAsyncDisposable
 
         _ = Task.Run(async () =>
         {
-            try { await _backup.SincronizarTudoAsync(_cts.Token); }
+            try { await _backup.SincronizarTudoAsync(null, _cts.Token); }
             catch (Exception ex) { _log.Warning($"Auto sync reconectou: {ex.Message}"); }
         });
     }
