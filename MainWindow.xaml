@@ -120,7 +120,18 @@
             <Setter Property="FontWeight"          Value="Normal"/>
             <Setter Property="TextWrapping"        Value="Wrap"/>
             <Setter Property="Foreground"          Value="#1a1a1a"/>
-            <Setter Property="IsTextSelectionEnabled" Value="True"/>
+        </Style>
+
+        <!-- Versão para TextBox que permite seleção de texto -->
+        <Style x:Key="CellCenterSelectable" TargetType="TextBox">
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Foreground" Value="#1a1a1a"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="IsReadOnly" Value="True"/>
         </Style>
 
         <!-- Linhas coloridas do log (pinta o BACKGROUND) -->
@@ -323,36 +334,39 @@
                                   FontSize="12" CanUserResizeRows="False"
                                   MinHeight="200" MaxHeight="350">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Hora" Width="110"
-                                                    Binding="{Binding Hora, StringFormat=HH:mm:ss}">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock"
-                                               BasedOn="{StaticResource CellCenter}"/>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-                                <DataGridTextColumn Header="Tipo" Width="87"
-                                                    Binding="{Binding Tipo}">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock"
-                                               BasedOn="{StaticResource CellCenter}"/>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-                                <DataGridTextColumn Header="" Width="40"
-                                                    Binding="{Binding Emoji}">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock"
-                                               BasedOn="{StaticResource CellCenter}"/>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-                                <DataGridTextColumn Header="Mensagem" Width="*"
-                                                    Binding="{Binding Mensagem}">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock"
-                                               BasedOn="{StaticResource CellCenter}">
-                                            <Setter Property="TextAlignment" Value="Center"/>
-                                        </Style>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
+                                <DataGridTemplateColumn Header="Hora" Width="110">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding Hora, StringFormat=HH:mm:ss}"
+                                                     Style="{StaticResource CellCenterSelectable}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Tipo" Width="87">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding Tipo}"
+                                                     Style="{StaticResource CellCenterSelectable}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="" Width="40">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding Emoji}"
+                                                     Style="{StaticResource CellCenterSelectable}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Mensagem" Width="*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding Mensagem}"
+                                                     Style="{StaticResource CellCenterSelectable}"
+                                                     TextAlignment="Center" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
                     </StackPanel>

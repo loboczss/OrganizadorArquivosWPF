@@ -254,7 +254,6 @@ namespace OrganizadorArquivosWPF
 
         private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
         {
-            LoggerService.Instance?.Critical("Task exception: " + e.Exception.Message);
             e.SetObserved();
         }
         #endregion
