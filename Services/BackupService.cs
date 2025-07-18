@@ -24,7 +24,7 @@ public sealed class BackupService
     private const string SPSitePath = "OneEngenharia";
     private const string DocumentLibrary = "DatalogGERAL";
 
-    private const int MaxConcurrentUploads = 4;
+    private const int MaxConcurrentUploads = 8;
     private const string CachePath =
         @"%LOCALAPPDATA%\OneEngRenamer\BackupCache.json";
     private const string PendingCsv =
@@ -150,7 +150,12 @@ public sealed class BackupService
             await sem.WaitAsync(ct).ConfigureAwait(false);
             try
             {
-                await _uploader.UploadFileAsync(file, $"{numOs}/{Path.GetFileName(file)}", ct).ConfigureAwait(false);
+                var fileProgress = new Progress<double>(p =>
+                {
+                    double global = ((completed + p / 100.0) * 100.0) / total;
+                    progress?.Report(new UploadProgressInfo(global, completed, total, Path.GetFileName(file)));
+                });
+                await _uploader.UploadFileAsync(file, $"{numOs}/{Path.GetFileName(file)}", fileProgress, ct).ConfigureAwait(false);
                 _cache.Add(numOs, Path.GetFileName(file));
                 res.Add(new(Path.GetFileName(file), true, CalcularSha1(file)));
             }
@@ -187,7 +192,12 @@ public sealed class BackupService
         {
             try
             {
-                await _uploader.UploadFileAsync(zip, $"{numOs}/{zipName}", ct).ConfigureAwait(false);
+                var zipProgress = new Progress<double>(p =>
+                {
+                    double global = ((completed + p / 100.0) * 100.0) / total;
+                    progress?.Report(new UploadProgressInfo(global, completed, total, zipName));
+                });
+                await _uploader.UploadFileAsync(zip, $"{numOs}/{zipName}", zipProgress, ct).ConfigureAwait(false);
                 _cache.Add(numOs, zipName);
                 res.Add(new(zipName, true, CalcularSha1(zip)));
             }
