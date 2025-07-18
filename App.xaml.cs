@@ -62,8 +62,17 @@ namespace OrganizadorArquivosWPF
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
 
             // 1) serviços de tray
-            _tray = new TrayService();
-            try { await _tray.StartAsync(track.NextSegment()).WaitAsync(cts.Token); } catch { }
+            try
+            {
+                _tray = new TrayService();
+                await _tray.StartAsync(track.NextSegment()).WaitAsync(cts.Token);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Falha ao iniciar serviços em segundo plano: {ex.Message}",
+                                "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                LoggerService.Instance?.Critical($"Tray start: {ex.Message}");
+            }
 
             // 2) planilha funcionários
             splash.SetStatus("Baixando planilha de funcionários...");
@@ -73,13 +82,18 @@ namespace OrganizadorArquivosWPF
 
             // 3) sincronização inicial
             splash.SetStatus("Sincronizando arquivos com SharePoint...");
-            _backup = new BackupService();
             try
             {
+                _backup = new BackupService();
                 await _backup.SincronizarTudoAsync(null, cts.Token)
                              .ContinueWith(_ => track.NextSegment().Report(100));
             }
-            catch { /* ignorar timeout */ }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Falha na sincronização inicial: {ex.Message}",
+                                "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                LoggerService.Instance?.Critical($"Sync init: {ex.Message}");
+            }
 
             splash.SetProgress(100);
             splash.Close();
@@ -93,7 +107,15 @@ namespace OrganizadorArquivosWPF
             }
 
             // Monitor de alterações em tempo real
-            _sync = new FileSyncService(_backup);
+            try
+            {
+                if (_backup != null)
+                    _sync = new FileSyncService(_backup);
+            }
+            catch (Exception ex)
+            {
+                LoggerService.Instance?.Critical($"FileSyncService: {ex.Message}");
+            }
 
             // Login
             var login = new LoginWindow();
