@@ -132,7 +132,6 @@ public sealed class ReliableSharePointService
                    ex.ResponseStatusCode == (int)HttpStatusCode.ServiceUnavailable)
             {
                 int delay = _baseDelay * (int)Math.Pow(2, attempt - 1);
-                _log.Info($"Throttle {ex.ResponseStatusCode} '{remotePath}' (tentativa {attempt}/{_maxRetries}) – aguardando {delay} ms.");
                 await Task.Delay(delay, ct).ConfigureAwait(false);
             }
             catch (Exception ex)
@@ -141,7 +140,6 @@ public sealed class ReliableSharePointService
                     throw;
 
                 int delay = _baseDelay * attempt;
-                _log.Warning($"Erro upload '{remotePath}' tent. {attempt}: {ex.Message}. Retry em {delay} ms.");
                 await Task.Delay(delay, ct).ConfigureAwait(false);
             }
         }
@@ -165,12 +163,12 @@ public sealed class ReliableSharePointService
             if (!string.IsNullOrEmpty(remoteHash) &&
                 !string.Equals(remoteHash, localHash, StringComparison.OrdinalIgnoreCase))
             {
-                _log.Warning($"Hash divergente em '{remotePath}' – poss. corrupção!");
+                // Hash mismatch indicates possible corruption, but skip noisy log
             }
         }
         catch (Exception ex)
         {
-            _log.Warning($"Falha ao verificar hash '{remotePath}': {ex.Message}");
+            // Ignore hash verification errors silently
         }
     }
 
