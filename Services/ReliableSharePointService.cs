@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
+using System.Text;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -71,7 +72,7 @@ public sealed class ReliableSharePointService
     {
         await EnsureInitializedAsync().ConfigureAwait(false);
 
-        string checkpointFile = Path.ChangeExtension(localPath, ".upload.json");
+        string checkpointFile = GetCheckpointPath(localPath);
         UploadCheckpoint? checkpoint = null;
         if (File.Exists(checkpointFile))
         {
@@ -143,6 +144,22 @@ public sealed class ReliableSharePointService
                 await Task.Delay(delay, ct).ConfigureAwait(false);
             }
         }
+    }
+
+    private static string GetCheckpointPath(string localPath)
+    {
+        string dir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "OneEngRenamer",
+            "UploadCheckpoints");
+        Directory.CreateDirectory(dir);
+
+        using var sha1 = SHA1.Create();
+        byte[] bytes = Encoding.UTF8.GetBytes(localPath);
+        var hash = sha1.ComputeHash(bytes);
+        var sb = new StringBuilder(hash.Length * 2);
+        foreach (byte b in hash) sb.Append(b.ToString("x2"));
+        return Path.Combine(dir, sb.ToString() + ".upload.json");
     }
     #endregion
 
