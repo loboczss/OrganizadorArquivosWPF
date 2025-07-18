@@ -6,6 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -19,6 +20,7 @@ public sealed class FileSyncService : IAsyncDisposable
     private readonly BlockingCollection<string> _queue = new();
     private readonly Task _worker;
     private readonly FileSystemWatcher[] _watchers;
+    private bool HasInternet => NetworkInterface.GetIsNetworkAvailable();
 
     public FileSyncService(BackupService backup)
     {
@@ -29,6 +31,8 @@ public sealed class FileSyncService : IAsyncDisposable
                                   .Select(TryCreateWatcher)
                                   .Where(w => w != null)
                                   .ToArray()!;
+
+        NetworkChange.NetworkAvailabilityChanged += OnNetworkAvailabilityChanged;
 
         // 2) Worker que processa a fila até o Cancel
         _worker = Task.Run(ProcessQueueAsync);
@@ -84,6 +88,21 @@ public sealed class FileSyncService : IAsyncDisposable
         }
     }
 
+    private async Task WaitForInternetAsync(CancellationToken ct)
+    {
+        while (!HasInternet && !ct.IsCancellationRequested)
+            await Task.Delay(5_000, ct);
+    }
+
+    private async void OnNetworkAvailabilityChanged(object? sender, NetworkAvailabilityEventArgs e)
+    {
+        if (e.IsAvailable)
+        {
+            try { await _backup.SincronizarTudoAsync(_cts.Token); }
+            catch (Exception ex) { _log.Warning($"Sync on network: {ex.Message}"); }
+        }
+    }
+
     // --- Loop infinito que agrupa por pasta e chama BackupService
     private async Task ProcessQueueAsync()
     {
@@ -111,6 +130,7 @@ public sealed class FileSyncService : IAsyncDisposable
 
             foreach (var dir in buffer.Keys.ToArray())
             {
+                await WaitForInternetAsync(_cts.Token);
                 try
                 {
                     await _backup.EnviarBackupAsync(dir, null, null, _cts.Token);
@@ -130,6 +150,8 @@ public sealed class FileSyncService : IAsyncDisposable
         _cts.Cancel();
         foreach (var w in _watchers) w.Dispose();
         _queue.CompleteAdding();
+
+        NetworkChange.NetworkAvailabilityChanged -= OnNetworkAvailabilityChanged;
 
         try { await _worker; }
         catch (Exception ex)
