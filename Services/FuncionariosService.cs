@@ -27,8 +27,8 @@ namespace OrganizadorArquivosWPF.Services
         private string _driveId;
 
         private readonly string _csvPath = Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory,
-            "funcionarios.csv");
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "OneEngRenamer", "OrganizadorArquivosWPF", "funcionarios.csv");
 
         public FuncionariosService()
         {

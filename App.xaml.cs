@@ -65,7 +65,7 @@ namespace OrganizadorArquivosWPF
             try
             {
                 _tray = new TrayService();
-                await _tray.StartAsync(track.NextSegment()).WaitAsync(cts.Token);
+                await _tray.StartAsync(track.NextSegment());
             }
             catch (Exception ex)
             {
