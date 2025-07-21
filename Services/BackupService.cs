@@ -214,7 +214,11 @@ public sealed class BackupService
 
         progress?.Report(new UploadProgressInfo(100, total, total, null));
 
-        _cache.Save();
+        try { _cache.Save(); }
+        catch (Exception ex)
+        {
+            _log.Warning($"Falha ao salvar cache de backup: {ex.Message}");
+        }
         return res;
     }
     #endregion
@@ -366,26 +370,48 @@ public sealed class BackupService
 
     private static void RegistrarPendente(string pasta)
     {
-        if (_pend.TryAdd(pasta, 0))
-            File.AppendAllLines(Environment.ExpandEnvironmentVariables(PendingCsv), new[] { pasta });
+        try
+        {
+            if (_pend.TryAdd(pasta, 0))
+                File.AppendAllLines(Environment.ExpandEnvironmentVariables(PendingCsv), new[] { pasta });
+        }
+        catch (Exception ex)
+        {
+            LoggerService.Instance.Warning($"Falha ao registrar pendente '{pasta}': {ex.Message}");
+        }
     }
 
     private static void RemoverPendente(string pasta)
     {
-        if (_pend.TryRemove(pasta, out _))
-            File.WriteAllLines(Environment.ExpandEnvironmentVariables(PendingCsv), _pend.Keys);
+        try
+        {
+            if (_pend.TryRemove(pasta, out _))
+                File.WriteAllLines(Environment.ExpandEnvironmentVariables(PendingCsv), _pend.Keys);
+        }
+        catch (Exception ex)
+        {
+            LoggerService.Instance.Warning($"Falha ao remover pendente '{pasta}': {ex.Message}");
+        }
     }
 
     private static List<string> CarregarPendentes()
     {
         var path = Environment.ExpandEnvironmentVariables(PendingCsv);
-        if (!File.Exists(path)) return new();
-        var list = File.ReadAllLines(path)
-                       .Where(l => !string.IsNullOrWhiteSpace(l))
-                       .Distinct(StringComparer.OrdinalIgnoreCase)
-                       .ToList();
-        foreach (var p in list) _pend.TryAdd(p, 0);
-        return list;
+        try
+        {
+            if (!File.Exists(path)) return new();
+            var list = File.ReadAllLines(path)
+                           .Where(l => !string.IsNullOrWhiteSpace(l))
+                           .Distinct(StringComparer.OrdinalIgnoreCase)
+                           .ToList();
+            foreach (var p in list) _pend.TryAdd(p, 0);
+            return list;
+        }
+        catch (Exception ex)
+        {
+            LoggerService.Instance.Warning($"Falha ao carregar pendentes: {ex.Message}");
+            return new();
+        }
     }
     #endregion
 }
