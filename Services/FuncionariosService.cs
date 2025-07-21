@@ -27,8 +27,8 @@ namespace OrganizadorArquivosWPF.Services
         private string _driveId;
 
         private readonly string _csvPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "OneEngRenamer","OrganizadorArquivosWPF","funcionarios.csv");
+            AppDomain.CurrentDomain.BaseDirectory,
+            "funcionarios.csv");
 
         public FuncionariosService()
         {
@@ -85,6 +85,25 @@ namespace OrganizadorArquivosWPF.Services
             Directory.CreateDirectory(Path.GetDirectoryName(_csvPath));
             using var fs = File.Create(_csvPath);
             await stream.CopyToAsync(fs);
+        }
+
+        /// <summary>
+        /// Baixa o arquivo de funcionários do SharePoint substituindo
+        /// qualquer versão local existente.
+        /// </summary>
+        public async Task AtualizarArquivoAsync(IProgress<double>? progress = null)
+        {
+            try
+            {
+                progress?.Report(0);
+                await BaixarCsvSharePointAsync();
+                progress?.Report(100);
+            }
+            catch
+            {
+                // Caller handles exceptions as needed
+                throw;
+            }
         }
 
         private void GarantirArquivoLocal()

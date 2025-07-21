@@ -77,8 +77,8 @@ namespace OrganizadorArquivosWPF
             // 2) planilha funcionários
             splash.SetStatus("Baixando planilha de funcionários...");
             var funcSrv = new FuncionariosService();
-            await Task.Run(funcSrv.ListarTodos, cts.Token)
-                      .ContinueWith(_ => track.NextSegment().Report(100));
+            await funcSrv.AtualizarArquivoAsync(track.NextSegment())
+                     .WaitAsync(cts.Token);
 
             // 3) sincronização inicial
             splash.SetStatus("Sincronizando arquivos com SharePoint...");
