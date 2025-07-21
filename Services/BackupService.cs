@@ -118,13 +118,13 @@ public sealed class BackupService
         IProgress<UploadProgressInfo>? progress = null,
         CancellationToken ct = default)
     {
-        var res = new List<FileUploadResult>();
-        if (!Directory.Exists(pasta)) return res;
+        var res = new ConcurrentBag<FileUploadResult>();
+        if (!Directory.Exists(pasta)) return res.ToList();
 
         progress?.Report(new UploadProgressInfo(-1, 0, 0, null)); // inicia barra indeterminada
 
         numOs ??= ExtrairOs(pasta);
-        if (string.IsNullOrWhiteSpace(numOs)) return res;
+        if (string.IsNullOrWhiteSpace(numOs)) return res.ToList();
 
         string driveId = await ObterDriveIdAsync(ct).ConfigureAwait(false);
         string folderId = await EnsureFolderAsync(driveId, numOs, ct).ConfigureAwait(false);
@@ -184,7 +184,7 @@ public sealed class BackupService
         catch (Exception)
         {
             progress?.Report(new UploadProgressInfo(100, total, total, null));
-            return res;
+            return res.ToList();
         }
         if (!_cache.Contains(numOs, zipName))
         {
@@ -219,7 +219,7 @@ public sealed class BackupService
         {
             _log.Warning($"Falha ao salvar cache de backup: {ex.Message}");
         }
-        return res;
+        return res.ToList();
     }
     #endregion
 
