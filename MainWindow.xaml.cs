@@ -725,18 +725,20 @@ namespace OrganizadorArquivosWPF
                 uploadSeg.Report(100);
                 _manutencoes.ClearData();
 
+                IReadOnlyList<FileUploadResult> extra = Array.Empty<FileUploadResult>();
                 if (_backup != null)
                 {
-                    try { await _backup.SincronizarPastasRenomeacaoAsync(_uploadReporter); }
+                    try { extra = await _backup.SincronizarPastasRenomeacaoAsync(_uploadReporter); }
                     catch (Exception ex) { _log.Error($"Sincronizacao: {ex.Message}"); }
                 }
 
                 if (backupTask.Status == TaskStatus.RanToCompletion)
                 {
-                    var enviados = backupTask.Result.Count(r => r.Verificado);
-                    var falhas = backupTask.Result.Where(r => !r.Verificado)
-                                                .Select(r => r.Nome)
-                                                .ToList();
+                    var resultados = backupTask.Result.Concat(extra).ToList();
+                    var enviados = resultados.Count(r => r.Verificado);
+                    var falhas = resultados.Where(r => !r.Verificado)
+                                            .Select(r => r.Nome)
+                                            .ToList();
                     var fail = falhas.Count;
                     Dispatcher.Invoke(() =>
                     {
