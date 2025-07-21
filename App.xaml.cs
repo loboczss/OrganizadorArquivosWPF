@@ -85,8 +85,9 @@ namespace OrganizadorArquivosWPF
             try
             {
                 _backup = new BackupService();
-                await _backup.SincronizarTudoAsync(null, cts.Token)
-                             .ContinueWith(_ => track.NextSegment().Report(100));
+                var seg = track.NextSegment();
+                var adapter = new Progress<UploadProgressInfo>(p => seg.Report(p.Percent));
+                await _backup.SincronizarTudoAsync(adapter, cts.Token);
             }
             catch (Exception ex)
             {

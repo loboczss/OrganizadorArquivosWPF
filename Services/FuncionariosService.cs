@@ -70,7 +70,7 @@ namespace OrganizadorArquivosWPF.Services
             return _driveId;
         }
 
-        private async Task BaixarCsvSharePointAsync()
+        private async Task BaixarCsvSharePointAsync(IProgress<double>? progress = null)
         {
             string driveId = await ObterDriveIdAsync();
             var page = await _graph
@@ -84,7 +84,24 @@ namespace OrganizadorArquivosWPF.Services
             using var stream = await _graph.Drives[driveId].Items[meta.Id].Content.GetAsync();
             Directory.CreateDirectory(Path.GetDirectoryName(_csvPath));
             using var fs = File.Create(_csvPath);
-            await stream.CopyToAsync(fs);
+
+            if (meta.Size is long total && total > 0)
+            {
+                var buffer = new byte[81920];
+                long read = 0;
+                int n;
+                while ((n = await stream.ReadAsync(buffer)) > 0)
+                {
+                    await fs.WriteAsync(buffer.AsMemory(0, n));
+                    read += n;
+                    progress?.Report(read * 100.0 / total);
+                }
+            }
+            else
+            {
+                await stream.CopyToAsync(fs);
+                progress?.Report(100);
+            }
         }
 
         /// <summary>
@@ -96,7 +113,7 @@ namespace OrganizadorArquivosWPF.Services
             try
             {
                 progress?.Report(0);
-                await BaixarCsvSharePointAsync();
+                await BaixarCsvSharePointAsync(progress);
                 progress?.Report(100);
             }
             catch
@@ -112,7 +129,7 @@ namespace OrganizadorArquivosWPF.Services
             {
                 try
                 {
-                    BaixarCsvSharePointAsync().GetAwaiter().GetResult();
+                    BaixarCsvSharePointAsync(null).GetAwaiter().GetResult();
                 }
                 catch (Exception ex)
                 {
