@@ -94,7 +94,6 @@ public sealed class BackupService
                                .ToList();
         int fail = falhas.Count;
         progress?.Report(new UploadProgressInfo(100, ok + fail, ok + fail, null));
-        _log.Info($"Backup: OK={ok} | Falhas={fail}{(fail > 0 ? $" ({string.Join(", ", falhas)})" : string.Empty)}");
         return resultados.ToList();
     }
 

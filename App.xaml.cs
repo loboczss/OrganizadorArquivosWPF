@@ -59,13 +59,13 @@ namespace OrganizadorArquivosWPF
             var track = new Utils.ProgressTracker(
                 new Progress<double>(v => splash.SetProgress(v)), 3); // 3 passos
 
-            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
 
             // 1) serviços de tray
             try
             {
                 _tray = new TrayService();
-                await _tray.StartAsync(track.NextSegment());
+                await _tray.StartAsync(track.NextSegment()).WaitAsync(cts.Token);
             }
             catch (Exception ex)
             {
