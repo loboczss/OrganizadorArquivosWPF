@@ -9,6 +9,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Net.NetworkInformation;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -52,12 +53,19 @@ namespace OrganizadorArquivosWPF
             base.OnStartup(e);
             EnsureRunAtStartup();
 
-            // Splash inicial
-            var splash = new SplashWindow();
-            splash.Show();
+            bool online = HasInternetConnection();
+            SplashWindow? splash = null;
+            Utils.ProgressTracker? track = null;
 
-            var track = new Utils.ProgressTracker(
-                new Progress<double>(v => splash.SetProgress(v)), 3); // 3 passos
+            if (online)
+            {
+                // Splash inicial
+                splash = new SplashWindow();
+                splash.Show();
+
+                track = new Utils.ProgressTracker(
+                    new Progress<double>(v => splash.SetProgress(v)), 3); // 3 passos
+            }
 
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
 
@@ -65,7 +73,10 @@ namespace OrganizadorArquivosWPF
             try
             {
                 _tray = new TrayService();
-                await _tray.StartAsync(track.NextSegment()).WaitAsync(cts.Token);
+                if (online)
+                    await _tray.StartAsync(track!.NextSegment()).WaitAsync(cts.Token);
+                else
+                    await _tray.StartAsync(null);
             }
             catch (Exception ex)
             {
@@ -74,30 +85,48 @@ namespace OrganizadorArquivosWPF
                 LoggerService.Instance?.Critical($"Tray start: {ex.Message}");
             }
 
-            // 2) planilha funcionários
-            splash.SetStatus("Baixando planilha de funcionários...");
-            var funcSrv = new FuncionariosService();
-            await funcSrv.AtualizarArquivoAsync(track.NextSegment())
-                     .WaitAsync(cts.Token);
-
-            // 3) sincronização inicial
-            splash.SetStatus("Sincronizando arquivos com SharePoint...");
-            try
+            if (online && splash != null)
             {
-                _backup = new BackupService();
-                var seg = track.NextSegment();
-                var adapter = new Progress<UploadProgressInfo>(p => seg.Report(p.Percent));
-                await _backup.SincronizarTudoAsync(adapter, cts.Token);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Falha na sincronização inicial: {ex.Message}",
-                                "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-                LoggerService.Instance?.Critical($"Sync init: {ex.Message}");
+                // 2) planilha funcionários
+                splash.SetStatus("Baixando planilha de funcionários...");
+                try
+                {
+                    var funcSrv = new FuncionariosService();
+                    await funcSrv.AtualizarArquivoAsync(track!.NextSegment())
+                             .WaitAsync(cts.Token);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Falha ao baixar planilha: {ex.Message}",
+                                    "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                    LoggerService.Instance?.Critical($"Func CSV: {ex.Message}");
+                }
             }
 
-            splash.SetProgress(100);
-            splash.Close();
+            if (online && splash != null)
+            {
+                // 3) sincronização inicial
+                splash.SetStatus("Sincronizando arquivos com SharePoint...");
+                try
+                {
+                    _backup = new BackupService();
+                    var seg = track!.NextSegment();
+                    var adapter = new Progress<UploadProgressInfo>(p => seg.Report(p.Percent));
+                    await _backup.SincronizarTudoAsync(adapter, cts.Token);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Falha na sincronização inicial: {ex.Message}",
+                                    "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                    LoggerService.Instance?.Critical($"Sync init: {ex.Message}");
+                }
+            }
+
+            if (online && splash != null)
+            {
+                splash.SetProgress(100);
+                splash.Close();
+            }
 
             // Atualização
             if (await PromptUpdateAsync())
@@ -280,6 +309,12 @@ namespace OrganizadorArquivosWPF
             e.SetObserved();
         }
         #endregion
+
+        private static bool HasInternetConnection()
+        {
+            try { return NetworkInterface.GetIsNetworkAvailable(); }
+            catch { return false; }
+        }
         #endregion
     }
 }
