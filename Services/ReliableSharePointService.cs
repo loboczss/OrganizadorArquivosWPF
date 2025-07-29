@@ -111,6 +111,9 @@ public sealed class ReliableSharePointService
 
 
 
+        if (!File.Exists(localPath) || new FileInfo(localPath).Length == 0)
+            return;
+
         for (int attempt = 1; attempt <= _maxRetries; attempt++)
         {
             try
@@ -135,7 +138,7 @@ public sealed class ReliableSharePointService
                 int delay = _baseDelay * (int)Math.Pow(2, attempt - 1);
                 await Task.Delay(delay, ct).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 if (attempt == _maxRetries)
                     throw;
